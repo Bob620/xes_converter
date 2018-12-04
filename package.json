@@ -1,0 +1,27 @@
+{
+  "name": "xes_converter",
+  "version": "1.0.0",
+  "description": "Converter for Microprobe xes files",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bob620/xes_converter.git"
+  },
+  "keywords": [
+    "xes",
+    "microprobe",
+    "jeol"
+  ],
+  "author": "Bob620",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Bob620/xes_converter/issues"
+  },
+  "homepage": "https://github.com/Bob620/xes_converter#readme",
+  "dependencies": {
+    "bit-buffer": "^0.2.3"
+  }
+}
