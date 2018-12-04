@@ -2,6 +2,7 @@ const fs = require('fs');
 
 const conditions = require('./util/conditions');
 const position = require('./structures/position');
+const csv = require('./util/csv');
 const Directory = require('./structures/directory');
 
 const BitView = require('bit-buffer').BitView;
@@ -67,7 +68,7 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
                     for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
                         let xesProbeNoise = [];
                     	for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
-                            xesProbeNoise.push(xesData.getUint32((32768*i) + (32*k)));
+                            xesProbeNoise.push(xesNoise.getUint32((32768*i) + (32*k)));
                         positionData.probeNoise.push(xesProbeNoise);
                     }
 
@@ -86,4 +87,4 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
 	}
 }
 
-console.log(positions);
+csv.writeToFile(`${process.argv[2]}/xes_output.csv`, positions);

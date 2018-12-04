@@ -2,7 +2,13 @@ const packageJson = require('../package.json');
 
 module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) => {
 	const [stageX, stageY, stageZ] = positionCondition.get('xm_ap_acm_stage_pos%0_0').split(' ');
+	let coef = mapRawCondition.get('map_raw_condition').get('fitting_coef_0');
+	const order = mapRawCondition.get('map_raw_condition').get('fitting_order');
 
+	for (let i = 1; i < order; i++)
+		coef += ';' + mapRawCondition.get('map_raw_condition').get(`fitting_coef_${i}`);
+
+	// Order of these matters, as maps iterate in insertion order, and thus the output of the csv file is in this order
 	return new Map([
 		['projectName', mapCondition.get('xm_cp_project_name')],
 		['comment', positionCondition.get('xm_cp_comment')],
@@ -27,15 +33,7 @@ module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) =
 		['specType', mapRawCondition.get('map_raw_condition').get('spec_type')],
 		['crystalName', positionCondition.get('xm_elem_wds_crystal_name%0')],
 		['calibrationOrder', mapRawCondition.get('map_raw_condition').get('fitting_order')],
-		['calibrationCoefficients', () => {
-			let coef = '';
-			const order = mapRawCondition.get('map_raw_condition').get('fitting_order');
-
-			for (let i = 0; i < order; i++)
-				coef += ';' + mapRawCondition.get('map_raw_condition').get(`fitting_coef_${i}`);
-
-			return coef;
-		}],
+		['calibrationCoefficients', coef],
 		['stepSize', positionCondition.get('xm_wds_step_size%0')],
 		['dwellTime', positionCondition.get('xm_wds_dwell_time%0')],
 		['startPos', positionCondition.get('xm_wds_scan_start_pos%0')],
