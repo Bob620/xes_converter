@@ -20,6 +20,8 @@ const topDirectory = new Directory(process.argv[2], {
 	}
 });
 
+let positions = [];
+
 for (const [dirName, dir] of topDirectory.getDirectories()) {
 	const files = dir.getFiles();
 	const dirs = dir.getDirectories();
@@ -36,8 +38,6 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
 		if (wdSpcInit.get('sem_data_version') !== '1')
 			console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
 
-		let positions = [];
-
 		for (const [posName, pos] of dirs) {
 			if (posName.startsWith('Pos_')) {
 				const posFiles = pos.getFiles();
@@ -48,28 +48,35 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
 
 					let positionData = {
 						metadata: position(mapCondition, mapRawCondition, wdSpcInit, positionCondition),
-						data: [[]]
+						probeData: [],
+						probeNoise: []
 					};
 
 					const xesBytes = fs.readFileSync(`${pos.getUri()}/1.xes`, {encoding: null}).buffer;
 					let xesHeader = new BitView(xesBytes, 0, 892);
 					let xesData = new BitView(xesBytes, 892, 8192*positionData.metadata.get('binsY'));
-//					let xesNoise = new BitView(xesBytes, 8192*positionData.metadata.get('binsY')); // 2 bit offset ?!?!?!?
+					let xesNoise = new BitView(xesBytes, 8192*positionData.metadata.get('binsY') + 2, xesBytes.byteLength-(8192*positionData.metadata.get('binsY')+2)-2); // 2 byte offset
 
 					for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
-						for (let k = 0; k < positionData.metadata.get('binYLength'); k++) {
-							console.log(xesData.getUint32((32768*i) + (32*k)));
-						}
-					}
+						let xesProbeData = [];
+						for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
+                            xesProbeData.push(xesData.getUint32((32768*i) + (32*k)));
+                        positionData.probeData.push(xesProbeData);
+                    }
+
+                    for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
+                        let xesProbeNoise = [];
+                    	for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
+                            xesProbeNoise.push(xesData.getUint32((32768*i) + (32*k)));
+                        positionData.probeNoise.push(xesProbeNoise);
+                    }
 
 					positions.push(positionData);
 				} else
-					console.warn(`Not processing, missing position files. Make sure data001.cnd and 1.xes are present [${pos.getUri()}]\\n`);
+					console.warn(`Not processing, missing position files. Make sure data001.cnd and 1.xes are present [${pos.getUri()}]\n`);
 			} else
 				console.warn(`Skipping, identified as not a position. [${pos.getUri()}]\n`);
 		}
-
-
 
 	} else {
 		throw {
@@ -79,4 +86,4 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
 	}
 }
 
-
+console.log(positions);
