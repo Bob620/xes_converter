@@ -1,6 +1,6 @@
 {
   "name": "xes_converter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Converter for Microprobe xes files",
   "main": "index.js",
   "scripts": {
