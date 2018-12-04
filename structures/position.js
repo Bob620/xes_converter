@@ -10,8 +10,8 @@ module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) =
 		['stageX', stageX],
 		['stageY', stageY],
 		['stageZ', stageZ],
-		['stateTilt', positionCondition.get('xm_ap_acm_stage_tilt')],
-		['stageRotation', positionCondition.get('xm_ap_acm_stage_rot')],
+		['stateTilt', positionCondition.get('xm_ap_acm_stage_tilt%0_0')],
+		['stageRotation', positionCondition.get('xm_ap_acm_stage_rot%0_0')],
 		['converterVersion', packageJson.version],
 		['mapSemVersion', mapCondition.get('sem_data_version')],
 		['rawMapVersion', mapRawCondition.get('map_raw_condition').get('version')],
@@ -25,7 +25,7 @@ module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) =
 		['posProbeCurrentPre', positionCondition.get('xm_data_probe_current')],
 		['posProbeCurrentPost', positionCondition.get('xm_data_probe_current')],
 		['specType', mapRawCondition.get('map_raw_condition').get('spec_type')],
-		['crystalName', positionCondition.get('xm_elem_wds_crystal_name')],
+		['crystalName', positionCondition.get('xm_elem_wds_crystal_name%0')],
 		['calibrationOrder', mapRawCondition.get('map_raw_condition').get('fitting_order')],
 		['calibrationCoefficients', () => {
 			let coef = '';
@@ -36,10 +36,10 @@ module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) =
 
 			return coef;
 		}],
-		['stepSize', positionCondition.get('xm_wds_step_size')],
-		['dwellTime', positionCondition.get('xm_wds_dwell_time')],
-		['startPos', positionCondition.get('xm_wds_scan_start_pos')],
-		['endPos', positionCondition.get('xm_wds_scan_end_pos')],
+		['stepSize', positionCondition.get('xm_wds_step_size%0')],
+		['dwellTime', positionCondition.get('xm_wds_dwell_time%0')],
+		['startPos', positionCondition.get('xm_wds_scan_start_pos%0')],
+		['endPos', positionCondition.get('xm_wds_scan_end_pos%0')],
 		['ccdSizeX', mapRawCondition.get('ccd_parameter').get('ccd_size_x')],
 		['ccdSizeY', mapRawCondition.get('ccd_parameter').get('ccd_size_y')],
 		['magnification', positionCondition.get('xm_ap_magnification%0')],
@@ -47,7 +47,7 @@ module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) =
 		['beamRotation', mapRawCondition.get('map_raw_condition').get('beam_rotation')],
 		['beamX', mapRawCondition.get('map_raw_condition').get('beam_num_x')],
 		['beamY', mapRawCondition.get('map_raw_condition').get('beam_num_y')],
-		['probeDiameter', mapCondition.get('xm_ap_sa_probe_diameter')],
+		['probeDiameter', mapCondition.get('xm_ap_sa_probe_diameter%0')],
 		['voltage', positionCondition.get('xm_ec_accel_volt')],
 		['ccdGain', mapRawCondition.get('ccd_parameter').get('gain')],
 		['ccdImageRotation', mapRawCondition.get('ccd_parameter').get('img_rotation')],
