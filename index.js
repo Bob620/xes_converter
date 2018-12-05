@@ -53,22 +53,25 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
 						probeNoise: []
 					};
 
+                    const BinByteLength = 4*(Number.parseInt(positionData.metadata.get('binYLength'))+0);
+                    const TotalBinByteLength = BinByteLength*positionData.metadata.get('binsY');
+
 					const xesBytes = fs.readFileSync(`${pos.getUri()}/1.xes`, {encoding: null}).buffer;
 					let xesHeader = new BitView(xesBytes, 0, 892);
-					let xesData = new BitView(xesBytes, 892, 8192*positionData.metadata.get('binsY'));
-					let xesNoise = new BitView(xesBytes, 8192*positionData.metadata.get('binsY') + 2, xesBytes.byteLength-(8192*positionData.metadata.get('binsY')+2)-2); // 2 byte offset
+					let xesData = new BitView(xesBytes, 892, TotalBinByteLength);
+					let xesNoise = new BitView(xesBytes, TotalBinByteLength + 2, xesBytes.byteLength - (TotalBinByteLength) - 4); // 2 byte offset on each end
 
 					for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
 						let xesProbeData = [];
 						for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
-                            xesProbeData.push(xesData.getUint32((32768*i) + (32*k)));
+                            xesProbeData.push(xesData.getUint32((BinByteLength*4*i) + (32*k)));
                         positionData.probeData.push(xesProbeData);
                     }
 
                     for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
                         let xesProbeNoise = [];
                     	for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
-                            xesProbeNoise.push(xesNoise.getUint32((32768*i) + (32*k)));
+                            xesProbeNoise.push(xesNoise.getUint32((BinByteLength*4*i) + (32*k)));
                         positionData.probeNoise.push(xesProbeNoise);
                     }
 
@@ -87,4 +90,4 @@ for (const [dirName, dir] of topDirectory.getDirectories()) {
 	}
 }
 
-csv.writeToFile(`${process.argv[2]}/xes_output.csv`, positions);
+csv.writeXesToFile(`${process.argv[2]}/xes_output.csv`, positions);
