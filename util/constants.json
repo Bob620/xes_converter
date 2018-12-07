@@ -1,0 +1,12 @@
+{
+  "xes": {
+    "headerByteOffset": 0,
+    "headerByteEnd": 892,
+    "dataByteOffset": 892,
+    "noiseByteOffset": 902,
+    "noiseByteEndOffset": 904,
+    "dataCheckOffset": 7072,
+    "noiseCheckOffset": 32,
+    "noiseDataOffset": 96
+  }
+}
