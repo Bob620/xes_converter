@@ -101,7 +101,7 @@ function xesConvert(topDirectory) {
 		}
 	}
 
-	csv.writeXesToFile(`${process.argv[2]}/xes_output.csv`, positions);
+	csv.writeXesToFile(`${topDirectory.getUri()}/xes_output.csv`, positions);
 }
 module.exports = {
 	xesConvert,
