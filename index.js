@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 const Directory = require('./structures/directory');
 const commands = require('./util/convertion');
 
