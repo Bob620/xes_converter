@@ -1,8 +1,11 @@
 {
   "name": "xes_converter",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Converter for Microprobe xes and qlw files",
   "main": "index.js",
+  "bin": {
+    "xes_converter": "index.js"
+  },
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
