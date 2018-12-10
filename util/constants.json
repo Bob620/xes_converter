@@ -8,5 +8,9 @@
     "dataCheckOffset": 7072,
     "noiseCheckOffset": 32,
     "noiseDataOffset": 96
+  },
+  "qlw":{
+    "arrayLength": 4096,
+    "dataByteOffset" : 40
   }
 }

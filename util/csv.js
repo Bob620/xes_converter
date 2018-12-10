@@ -1,30 +1,25 @@
 const fs = require('fs');
 
 module.exports = {
-    writeQlwToFile: (fileUri, qlw) => {
+    writeQlwToFile: (fileUri, positions) => {
         fs.writeFileSync(fileUri, '');
 
-        const pos0Meta = qlw[0].metadata.keys();
-        const pos0Bins = qlw[0].metadata.get('binsY');
-        const pos0Length = qlw[0].metadata.get('binYLength');
+        const pos0Meta = positions[0].metadata.keys();
+        const pos0Length = positions[0].probeData.length;
 
         for (const key of pos0Meta) {
             let line = key;
-            for (const position of qlw)
+            for (const position of positions)
                 line += `, ${position.metadata.get(key)}`;
 
             fs.appendFileSync(fileUri, `${line}\n`);
         }
 
         let probeDataOutput = 'Probe Data\n';
-        for (let i = 0; i < pos0Bins; i++) {
-            for (let j = 0; j < pos0Length; j++) {
-                probeDataOutput += `${j}`;
-                for (const position of qlw)
-                    probeDataOutput += `, ${position.probeData[i][j]}`;
-                if (j !== pos0Length-1)
-                    probeDataOutput += '\n';
-            }
+        for (let i = 0; i < pos0Length; i++) {
+                probeDataOutput += `${i}`;
+                for (const position of positions)
+                    probeDataOutput += `, ${position.probeData[i]}`;
             probeDataOutput += '\n';
         }
 

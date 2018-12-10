@@ -2,8 +2,11 @@ const fs = require('fs');
 
 class Directory {
 	constructor(uri, {name='', inheritValidFile=false, validDir=() => true, validFile=() => true}) {
+		let uriName = uri.split('\\');
+		uriName = uriName[uriName.length-1].split('/');
+
 		this.data = {
-			name: name ? name : uri,
+			name: name ? name : uriName[uriName.length-1],
 			uri,
 			inheritValidFile,
 			validDir,
