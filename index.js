@@ -2,6 +2,7 @@
 
 const Directory = require('./structures/directory');
 const commands = require('./util/convertion');
+const csv = require('./util/csv');
 
 //const conditionRegex = /^\$(.*?) (.*$)/gmi;
 
@@ -18,6 +19,7 @@ function help() {
 
 let options = {
 	topDirectoryUri: '',
+	outputDirectoryUri: '',
 	xes: false,
 	qlw: false,
 	help: false
@@ -25,6 +27,11 @@ let options = {
 
 for (let i = 2; i < process.argv.length; i++) {
 	switch (process.argv[i]) {
+		case '-xq':
+		case '-qx':
+			options.xes = true;
+			options.qlw = true;
+			break;
 		case '--xes':
 		case '-x':
 			options.xes = true;
@@ -36,6 +43,10 @@ for (let i = 2; i < process.argv.length; i++) {
 		case '--help':
 		case '-h':
 			options.help = true;
+			break;
+		case '--output':
+		case '-o':
+			options.outputDirectoryUri = process.argv[i++];
 			break;
 		default:
 			options.topDirectoryUri = process.argv[i];
@@ -61,11 +72,25 @@ else {
 			if (!options.qlw && !options.xes)
 				options.xes = true;
 
-			if (options.xes)
-				commands.xesConvert(topDirectory);
+			if (options.xes) {
+				const startTime = Date.now();
+				const positions = commands.xesConvert(topDirectory);
 
-			if (options.qlw)
-				commands.qlwConvert(topDirectory);
+				console.log(`Read in ${positions.length} xes files in ${(Date.now() - startTime) / 1000} seconds`);
+
+				csv.writeXesToFile(`${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_xes_output.csv`, positions);
+				console.log(`Finished converting xes to csv in ${(Date.now() - startTime) / 1000} (${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_xes_output.csv)`);
+			}
+
+			if (options.qlw) {
+				const startTime = Date.now();
+				const positions = commands.qlwConvert(topDirectory);
+
+				console.log(`Read in ${positions.length} qlw files in ${(Date.now() - startTime) / 1000} seconds`);
+
+				csv.writeQlwToFile(`${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_qlw_output.csv`, positions);
+				console.log(`Finished converting qlw to csv in ${(Date.now() - startTime) / 1000} (${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_qlw_output.csv)`);
+			}
 		}
 	} catch(err) {
 		console.error(err);
