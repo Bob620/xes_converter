@@ -7,6 +7,35 @@ const position = require('../structures/position');
 
 const BitView = require('bit-buffer').BitView;
 
+function avgConvert(topDirectory, xesData) {
+	const positions = xesData ? xesData : xesConvert(topDirectory);
+
+	let output = [];
+
+	for (let i = 0; i < positions.length; i++) {
+		positions[i].metadata.set('binsY', 1);
+		output.push({
+			metadata: positions[i].metadata,
+			probeData: [[]],
+			probeNoise: [[]]
+		});
+
+		// First set of all 17 arrays added
+		for (let j = 0; j < positions[i].probeData.length; j++) {
+			for (let k = 0; k < positions[i].probeData[j].length; k++)
+				output[i].probeData[0][k] = (output[i].probeData[0][k] ? output[i].probeData[0][k] : 0) + Number.parseInt(positions[i].probeData[j][k]);
+		}
+
+		// Second set of first 16 arrays added
+		for (let j = 0; j < positions[i].probeData.length-1; j++) {
+			for (let k = 0; k < positions[i].probeData[j].length; k++)
+				output[i].probeNoise[0][k] = (output[i].probeNoise[0][k] ? output[i].probeNoise[0][k] : 0) + Number.parseInt(positions[i].probeData[j][k]);
+		}
+	}
+
+	return output;
+}
+
 function qlwConvert(topDirectory) {
 	let positions = [];
 
@@ -156,5 +185,6 @@ function xesConvert(topDirectory) {
 }
 module.exports = {
 	xesConvert,
-	qlwConvert
+	qlwConvert,
+	avgConvert
 };
