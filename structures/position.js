@@ -9,6 +9,7 @@ module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) =
 		coef += ';' + mapRawCondition.get('map_raw_condition').get(`fitting_coef_${i}`);
 
 	// Order of these matters, as maps iterate in insertion order, and thus the output of the csv file is in this order
+	// The csv code will output anything in this, so just change these for adding/removing metadata
 	return new Map([
 		['projectName', mapCondition.get('xm_cp_project_name')],
 		['comment', positionCondition.get('xm_cp_comment')],
