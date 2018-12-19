@@ -80,7 +80,7 @@ for (let i = 2; i < process.argv.length; i++) {
 							options.help = true;
 							break;
 					}
-			break;
+				break;
 		}
 	} else
 		options.topDirectoryUri = process.argv[i];
@@ -94,12 +94,17 @@ if (options.help)
 else {
 	try {
 		if (!options.topDirectoryUri)
-			console.error("Please enter a uri of a directory to process, use with no options or -h for help");
+			console.error('Please enter a uri of a directory to process, use with no options or -h for help');
 		else {
 			console.log('Preparing...');
+			const initialStartTime = Date.now();
 			const topDirectory = new Directory(options.topDirectoryUri, {
-				validDir: dir => {return dir.name.endsWith('_QLW');}
+				validDir: dir => {
+					return dir.name.endsWith('_QLW');
+				}
 			});
+
+			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
 			if (!options.qlw && !options.xes && !options.avg)
 				options.xes = true;
@@ -111,21 +116,30 @@ else {
 				const batchSize = options.batchSize;
 
 				let startBatchConvert = Date.now();
-				const totalPositions = commands.xesConvert(topDirectory, batchSize,(batchData, batchNumber) => {
-					csv.writeXesToFile(`${topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_xes_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
-					console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} xes files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
+				const totalPositions = commands.xesConvert(topDirectory, batchSize, (batchData, batchNumber) => {
+					let batchConverted = batchSize;
+					let totalConverted = batchNumber;
+					if (batchNumber % batchSize) {
+						batchConverted = batchNumber % batchSize;
+						totalConverted = batchNumber - batchSize;
+					}
+
+					csv.writeXesToFile(`${baseFileName}_xes_output_${totalConverted}.csv`, batchData);
+					console.log(`Converted ${batchConverted} xes files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
 					startBatchConvert = Date.now();
 					if (options.avg) {
-						csv.writeXesToFile(`${topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_avg_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, commands.avgFromXes(batchData));
-						console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} xes files to avg cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
+						csv.writeXesToFile(`${baseFileName}_avg_output_${totalConverted}.csv`, commands.avgFromXes(batchData));
+						console.log(`Converted ${batchConverted} xes files to avg cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
 						startBatchConvert = Date.now();
 					}
 				});
 
-				console.log(`Finished converting ${totalPositions} xes files to csv in ${(Date.now() - startTime) / 1000} (${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_xes_output_BATCH.csv)`);
+				const timePassed = (Date.now() - startTime) / 1000;
+
+				console.log(`Finished converting ${totalPositions} xes files to csv in ${timePassed} (${baseFileName}_xes_output_BATCH.csv)`);
 
 				if (options.avg)
-					console.log(`Finished converting ${totalPositions} xes to avg csv in ${(Date.now() - startTime) / 1000} (${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_avg_output_BATCH.csv)`);
+					console.log(`Finished converting ${totalPositions} xes to avg csv in ${timePassed} (${baseFileName}_avg_output_BATCH.csv)`);
 			}
 
 			if (options.qlw) {
@@ -135,13 +149,13 @@ else {
 				const batchSize = options.batchSize;
 
 				let startBatchConvert = Date.now();
-				const totalPositions = commands.qlwConvert(topDirectory, batchSize,(batchData, batchNumber) => {
-					csv.writeQlwToFile(`${topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_qlw_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
+				const totalPositions = commands.qlwConvert(topDirectory, batchSize, (batchData, batchNumber) => {
+					csv.writeQlwToFile(`${baseFileName}_qlw_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
 					console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} qlw files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
 					startBatchConvert = Date.now();
 				});
 
-				console.log(`Finished converting ${totalPositions} qlw to csv in ${(Date.now() - startTime) / 1000} (${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_qlw_output_BATCH.csv)`);
+				console.log(`Finished converting ${totalPositions} qlw to csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_qlw_output_BATCH.csv)`);
 			}
 
 			if (options.avg && !options.xes) {
@@ -151,15 +165,15 @@ else {
 				const batchSize = options.batchSize;
 
 				let startBatchConvert = Date.now();
-				const totalPositions = commands.avgConvert(topDirectory, batchSize,(batchData, batchNumber) => {
-					csv.writeXesToFile(`${topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_avg_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
+				const totalPositions = commands.avgConvert(topDirectory, batchSize, (batchData, batchNumber) => {
+					csv.writeXesToFile(`${baseFileName}_avg_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
 					console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} xes files to avg cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
 					startBatchConvert = Date.now();
 				});
 
-				console.log(`Finished converting ${totalPositions} xes to avg csv in ${(Date.now() - startTime) / 1000} (${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}_avg_output_BATCH.csv)`);
+				console.log(`Finished converting ${totalPositions} xes to avg csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_avg_output_BATCH.csv)`);
 			}
-			console.log('All files processed.');
+			console.log(`All files processed in ${(Date.now() - initialStartTime) / 1000}.`);
 		}
 	} catch(err) {
 		console.error(err);
