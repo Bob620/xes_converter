@@ -7,9 +7,7 @@ const position = require('../structures/position');
 
 const BitView = require('bit-buffer').BitView;
 
-function avgConvert(topDirectory, xesData) {
-	const positions = xesData ? xesData : xesConvert(topDirectory);
-
+function avgFromXes(positions) {
 	let output = [];
 
 	for (let i = 0; i < positions.length; i++) {
@@ -36,8 +34,15 @@ function avgConvert(topDirectory, xesData) {
 	return output;
 }
 
-function qlwConvert(topDirectory) {
-	let positions = [];
+function avgConvert(topDirectory, batchSize, batchProcessCallback) {
+	return xesConvert(topDirectory, batchSize,(batchData, batchNumber) => {
+		batchProcessCallback(avgFromXes(batchData), batchNumber);
+	});
+}
+
+function qlwConvert(topDirectory, batchSize, batchProcessCallback) {
+	let batchData = [];
+	let batchNum = 0;
 
 	for (const [, dir] of topDirectory.getDirectories()) {
 		const files = dir.getFiles();
@@ -59,6 +64,11 @@ function qlwConvert(topDirectory) {
 				if (posName.startsWith('Pos_')) {
 					const posFiles = pos.getFiles();
 					if (posFiles.has('data001.qlw') && posFiles.has('data001.cnd')) {
+						if (batchNum !== 0 && batchNum % batchSize === 0) {
+							batchProcessCallback(batchData, batchNum);
+							batchData = [];
+						}
+
 						const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
 						if (positionCondition.get('sem_data_version') !== '0')
 							console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
@@ -76,7 +86,8 @@ function qlwConvert(topDirectory) {
 						for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
 							positionData.probeData.push(qlwData.getFloat64((8 * 8 * i) + 32)); // Measured in bits
 
-						positions.push(positionData);
+						batchData.push(positionData);
+						batchNum++;
 					} else
 						console.warn(`Not processing, missing qlw position files. Make sure data001.cnd and data001.qlw are present [${pos.getUri()}]\n`);
 				} else
@@ -90,11 +101,16 @@ function qlwConvert(topDirectory) {
 			};
 		}
 	}
-	return positions;
+
+	if (batchData.length > 0)
+		batchProcessCallback(batchData, batchNum+batchSize);
+
+	return batchNum;
 }
 
-function xesConvert(topDirectory) {
-	let positions = [];
+function xesConvert(topDirectory, batchSize, batchProcessCallback) {
+	let batchData = [];
+	let batchNum = 0;
 
 	for (const [, dir] of topDirectory.getDirectories()) {
 		const files = dir.getFiles();
@@ -116,6 +132,11 @@ function xesConvert(topDirectory) {
 				if (posName.startsWith('Pos_')) {
 					const posFiles = pos.getFiles();
 					if (posFiles.has('1.xes') && posFiles.has('data001.cnd')) {
+						if (batchNum !== 0 && batchNum % batchSize === 0) {
+							batchProcessCallback(batchData, batchNum);
+							batchData = [];
+						}
+
 						const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
 						if (positionCondition.get('sem_data_version') !== '0')
 							console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
@@ -130,14 +151,6 @@ function xesConvert(topDirectory) {
 						const TotalBinByteLength = BinByteLength * Number.parseInt(positionData.metadata.get('binsY'));
 
 						const xesBytes = fs.readFileSync(`${pos.getUri()}/1.xes`, {encoding: null}).buffer;
-//						let xesHeader = new DataView(xesBytes, 0, 892);
-//						if (xesHeader.getUint32(221 * 4) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
-//							throw {
-//								message: 'xes file incorrectly read?',
-//								code: 2
-//							};
-//						let xesData = new DataView(xesBytes, 892, TotalBinByteLength);
-//						let xesNoise = new DataView(xesBytes, TotalBinByteLength + 2, xesBytes.byteLength - TotalBinByteLength - 4); // 2 byte offset on each end
 
 						const xesHeader = new BitView(xesBytes, constants.xes.headerByteOffset, constants.xes.headerByteEnd);
 						if (xesHeader.getUint32(constants.xes.dataCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
@@ -167,7 +180,8 @@ function xesConvert(topDirectory) {
 							positionData.probeNoise.push(xesProbeNoise);
 						}
 
-						positions.push(positionData);
+						batchData.push(positionData);
+						batchNum++;
 					} else
 						console.warn(`Not processing, missing xes position files. Make sure data001.cnd and 1.xes are present [${pos.getUri()}]\n`);
 				} else
@@ -181,10 +195,15 @@ function xesConvert(topDirectory) {
 			};
 		}
 	}
-	return positions;
+
+	if (batchData.length > 0)
+		batchProcessCallback(batchData, batchNum+batchSize);
+
+	return batchNum;
 }
 module.exports = {
 	xesConvert,
 	qlwConvert,
-	avgConvert
+	avgConvert,
+	avgFromXes
 };
