@@ -1,6 +1,6 @@
 {
   "name": "xes_converter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Converter for Microprobe xes and qlw files",
   "main": "index.js",
   "bin": {
@@ -17,7 +17,8 @@
   "keywords": [
     "xes",
     "microprobe",
-    "jeol"
+    "jeol",
+    "qlw"
   ],
   "author": "Bob620",
   "license": "MIT",
