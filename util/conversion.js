@@ -25,7 +25,7 @@ function avgFromXes(positions) {
 		}
 
 		// Second set of first 16 arrays added
-		for (let j = 0; j < positions[i].probeData.length-1; j++) {
+		for (let j = 0; j < positions[i].probeData.length - 1; j++) {
 			for (let k = 0; k < positions[i].probeData[j].length; k++)
 				output[i].probeNoise[0][k] = (output[i].probeNoise[0][k] ? output[i].probeNoise[0][k] : 0) + Number.parseInt(positions[i].probeData[j][k]);
 		}
@@ -35,7 +35,7 @@ function avgFromXes(positions) {
 }
 
 function avgConvert(topDirectory, batchSize, batchProcessCallback) {
-	return xesConvert(topDirectory, batchSize,(batchData, batchNumber) => {
+	return xesConvert(topDirectory, batchSize, (batchData, batchNumber) => {
 		batchProcessCallback(avgFromXes(batchData), batchNumber);
 	});
 }
@@ -75,7 +75,7 @@ function qlwConvert(topDirectory, batchSize, batchProcessCallback) {
 
 						let positionData = {
 							metadata: position(mapCondition, mapRawCondition, wdSpcInit, positionCondition),
-							probeData: [],
+							probeData: []
 						};
 
 						const qlwBytes = fs.readFileSync(`${pos.getUri()}/data001.qlw`, {encoding: null}).buffer;
@@ -103,7 +103,7 @@ function qlwConvert(topDirectory, batchSize, batchProcessCallback) {
 	}
 
 	if (batchData.length > 0)
-		batchProcessCallback(batchData, batchNum+batchSize);
+		batchProcessCallback(batchData, batchNum + batchSize);
 
 	return batchNum;
 }
@@ -197,13 +197,13 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 	}
 
 	if (batchData.length > 0)
-		batchProcessCallback(batchData, batchNum+batchSize);
+		batchProcessCallback(batchData, batchNum + batchSize);
 
 	return batchNum;
 }
 module.exports = {
-	xesConvert,
-	qlwConvert,
+	avgFromXes,
 	avgConvert,
-	avgFromXes
+	qlwConvert,
+	xesConvert
 };
