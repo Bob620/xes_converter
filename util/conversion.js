@@ -7,7 +7,7 @@ const position = require('../structures/position');
 
 const BitView = require('bit-buffer').BitView;
 
-function avgFromXes(positions) {
+function sumFromXes(positions) {
 	let output = [];
 
 	for (let i = 0; i < positions.length; i++) {
@@ -34,9 +34,9 @@ function avgFromXes(positions) {
 	return output;
 }
 
-function avgConvert(topDirectory, batchSize, batchProcessCallback) {
+function sumConvert(topDirectory, batchSize, batchProcessCallback) {
 	return xesConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-		batchProcessCallback(avgFromXes(batchData), batchNumber);
+		batchProcessCallback(sumFromXes(batchData), batchNumber);
 	});
 }
 
@@ -202,8 +202,8 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 	return batchNum;
 }
 module.exports = {
-	avgFromXes,
-	avgConvert,
+	sumFromXes,
+	sumConvert,
 	qlwConvert,
 	xesConvert
 };
