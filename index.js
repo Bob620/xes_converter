@@ -16,6 +16,7 @@ const constants = require('./util/constants');
 function help() {
 	console.log('Usage: xes_converter [options] [directory]\n');
 	console.log('Options:');
+	console.log('-v, --version                    \tDisplays the version information');
 	console.log('-x, --xes                        \tConverts the xes files into an output file located in the directory given');
 	console.log('-q, --qlw                        \tConverts the qlw files into an output file located in the directory given');
 	console.log('-s, --sum                        \tConverts the xes files into an sum file (like qlw) located in the directory given');
@@ -31,12 +32,16 @@ let options = {
 	xes: false,
 	qlw: false,
 	sum: false,
-	help: false
+	help: false,
+	version: false,
 };
 
 for (let i = 2; i < process.argv.length; i++) {
 	if (process.argv[i].startsWith('--')) {
 		switch (process.argv[i]) {
+			case '--version':
+				options.version = true;
+				break;
 			case '--sum':
 				options.sum = true;
 				break;
@@ -67,6 +72,9 @@ for (let i = 2; i < process.argv.length; i++) {
 			default:
 				for (const char of process.argv[i])
 					switch (char) {
+						case 'v':
+							options.version = true;
+							break;
 						case 's':
 							options.sum = true;
 							break;
@@ -86,11 +94,13 @@ for (let i = 2; i < process.argv.length; i++) {
 		options.topDirectoryUri = process.argv[i];
 }
 
-if (options.topDirectoryUri === '' && !options.xes && !options.qlw)
+if (options.topDirectoryUri === '' && !options.xes && !options.qlw && !options.sum && !options.version)
 	options.help = true;
 
 if (options.help)
 	help();
+else if (options.version)
+	console.log(require('./package').version);
 else {
 	try {
 		if (!options.topDirectoryUri)
