@@ -1,6 +1,6 @@
 const packageJson = require('../package.json');
 
-module.exports = (mapCondition, mapRawCondition, wdSpcInit, positionCondition) => {
+module.exports = (mapCondition, mapRawCondition, positionCondition) => {
 	const [stageX, stageY, stageZ] = positionCondition.get('xm_ap_acm_stage_pos%0_0').split(' ');
 	let coef = mapRawCondition.get('map_raw_condition').get('fitting_coef_0');
 	const order = mapRawCondition.get('map_raw_condition').get('fitting_order');

@@ -56,9 +56,9 @@ function qlwConvert(topDirectory, batchSize, batchProcessCallback) {
 			if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
 				console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
 
-			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
-			if (wdSpcInit.get('sem_data_version') !== '1')
-				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
+//			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
+//			if (wdSpcInit.get('sem_data_version') !== '1')
+//				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
 
 			for (const [posName, pos] of dirs) {
 				if (posName.startsWith('Pos_')) {
@@ -74,7 +74,7 @@ function qlwConvert(topDirectory, batchSize, batchProcessCallback) {
 							console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
 
 						let positionData = {
-							metadata: position(mapCondition, mapRawCondition, wdSpcInit, positionCondition),
+							metadata: position(mapCondition, mapRawCondition, positionCondition),
 							probeData: []
 						};
 
@@ -124,9 +124,9 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 			if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
 				console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
 
-			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
-			if (wdSpcInit.get('sem_data_version') !== '1')
-				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
+//			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
+//			if (wdSpcInit.get('sem_data_version') !== '1')
+//				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
 
 			for (const [posName, pos] of dirs) {
 				if (posName.startsWith('Pos_')) {
@@ -142,7 +142,7 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 							console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
 
 						let positionData = {
-							metadata: position(mapCondition, mapRawCondition, wdSpcInit, positionCondition),
+							metadata: position(mapCondition, mapRawCondition, positionCondition),
 							probeData: [],
 							probeNoise: []
 						};
@@ -201,6 +201,7 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 
 	return batchNum;
 }
+
 module.exports = {
 	sumFromXes,
 	sumConvert,
