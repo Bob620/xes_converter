@@ -3,6 +3,7 @@
 const Directory = require('./structures/directory');
 const commands = require('./util/conversion');
 const csv = require('./util/csv');
+const Classify = require('./util/classification');
 
 const constants = require('./util/constants');
 
@@ -17,9 +18,11 @@ function help() {
 	console.log('Usage: xes_converter [options] [directory]\n');
 	console.log('Options:');
 	console.log('-v, --version                    \tDisplays the version information');
-	console.log('-x, --xes                        \tConverts the xes files into an output file located in the directory given');
+	console.log('-x, --supportsXes                        \tConverts the supportsXes files into an output file located in the directory given');
 	console.log('-q, --qlw                        \tConverts the qlw files into an output file located in the directory given');
-	console.log('-s, --sum                        \tConverts the xes files into an sum file (like qlw) located in the directory given');
+	console.log('-s, --sum                        \tConverts the supportsXes files into an sum file (like qlw) located in the directory given');
+	console.log('-f, --force                      \tForces data output even with missing metadata');
+	console.log('-e, --explore                    \tExplores and assumes output data wanted');
 	console.log('-h, --help                       \tProvides this text');
 	console.log('-o [uri], --output [uri]         \tOutput directory uri');
 	console.log(`-b [number], --batchsize [number]\tThe number of positions per output file, default: ${constants.batchSize}`);
@@ -34,6 +37,9 @@ let options = {
 	sum: false,
 	help: false,
 	version: false,
+	loose: false,
+	map: false,
+	line: false
 };
 
 for (let i = 2; i < process.argv.length; i++) {
@@ -45,7 +51,7 @@ for (let i = 2; i < process.argv.length; i++) {
 			case '--sum':
 				options.sum = true;
 				break;
-			case '--xes':
+			case '--supportsXes':
 				options.xes = true;
 				break;
 			case '--qlw':
@@ -59,6 +65,9 @@ for (let i = 2; i < process.argv.length; i++) {
 				break;
 			case '--batchsize':
 				options.batchSize = process.argv[++i];
+				break;
+			case '--loose':
+				options.loose = true;
 				break;
 		}
 	} else if (process.argv[i].startsWith('-')) {
@@ -87,6 +96,9 @@ for (let i = 2; i < process.argv.length; i++) {
 						case 'h':
 							options.help = true;
 							break;
+						case 'l':
+							options.loose = true;
+							break;
 					}
 				break;
 		}
@@ -108,11 +120,46 @@ else {
 		else {
 			console.log('Preparing...');
 			const initialStartTime = Date.now();
-			const topDirectory = new Directory(options.topDirectoryUri, {
-				validDir: dir => {
-					return dir.name.endsWith('_QLW');
-				}
-			});
+			let topDirectory;
+
+//			if (options.force)
+//				topDirectory = new Directory(options.topDirectoryUri, {});
+//			else
+				topDirectory = new Directory(options.topDirectoryUri);/*, {
+					validDir: dir => {
+						return dir.name.endsWith('_QLW') || dir.name.endsWith('_MAP') || dir.name.endsWith('_LIN')
+					},
+					afterDirFilter: dir => {
+						const name = dir.getName();
+
+						if ((options.qlw || options.xes || options.sum) && name.endsWith('_QLW')) {
+							const filteredDir = dirChecks.qlwTopFilter(dir, options);
+
+							if (filteredDir) {
+								filteredDir.setMeta(constants.dirTypes.metaKey, constants.dirTypes.qlw);
+								return filteredDir;
+							}
+						} else if (options.map && name.endsWith('_MAP')) {
+							const filteredDir = dirChecks.mapTopFilter(dir, options);
+
+							if (filteredDir) {
+								filteredDir.setMeta(constants.dirTypes.metaKey, constants.dirTypes.map);
+								return filteredDir;
+							}
+						} else if (options.line && name.endsWith('_LIN')) {
+							const filteredDir = dirChecks.lineTopFilter(dir, options);
+
+							if (filteredDir) {
+								filteredDir.setMeta(constants.dirTypes.metaKey, constants.dirTypes.line);
+								return filteredDir;
+							}
+						}
+					}
+				});*/
+
+			const classify = new Classify(options);
+
+			classify.exploreDirectory(topDirectory);
 
 			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
@@ -121,7 +168,7 @@ else {
 
 			if (options.xes) {
 				const startTime = Date.now();
-				console.log('Processing xes files...');
+				console.log('Processing supportsXes files...');
 
 				const batchSize = options.batchSize;
 
@@ -170,7 +217,7 @@ else {
 
 			if (options.sum && !options.xes) {
 				const startTime = Date.now();
-				console.log('Processing xes files...');
+				console.log('Processing supportsXes files...');
 
 				const batchSize = options.batchSize;
 

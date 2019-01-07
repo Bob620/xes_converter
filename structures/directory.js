@@ -1,16 +1,13 @@
 const fs = require('fs');
 
 class Directory {
-	constructor(uri, {name='', inheritValidFile=false, validDir=() => true, validFile=() => true}) {
+	constructor(uri, options={}) {
 		let uriName = uri.split('\\');
 		uriName = uriName[uriName.length-1].split('/');
 
 		this.data = {
-			name: name ? name : uriName[uriName.length-1],
+			name: options.name ? options.name : uriName[uriName.length-1],
 			uri,
-			inheritValidFile,
-			validDir,
-			validFile,
 			directories: new Map(),
 			files: new Map()
 		};
@@ -25,17 +22,17 @@ class Directory {
 
 		for (const file of files) {
 			if (file.name) {
-				if (file.isDirectory() && this.data.validDir(file))
-					this.data.directories.set(file.name, new Directory(`${this.data.uri}/${file.name}`, this.data.inheritValidFile ? {name: file.name, validFile: this.data.validFile} : {name: file.name}));
-				else if (file.isFile() && this.data.validFile(file))
+				if (file.isDirectory())
+					this.data.directories.set(file.name, new Directory(`${this.data.uri}/${file.name}`, {name: file.name}));
+				else if (file.isFile())
 					this.data.files.set(file.name, file);
 			} else {
 				let stats = fs.statSync(`${this.data.uri}/${file}`);
 				stats.name = file;
 
-				if (stats.isDirectory() && this.data.validDir(stats))
-					this.data.directories.set(file, new Directory(`${this.data.uri}/${file}`, this.data.inheritValidFile ? {name: file, validFile: this.data.validFile} : {name: file}));
-				else if (stats.isFile() && this.data.validFile(stats))
+				if (stats.isDirectory())
+					this.data.directories.set(file, new Directory(`${this.data.uri}/${file}`, {name: file}));
+				else if (stats.isFile())
 					this.data.files.set(stats.name, stats);
 			}
 		}
@@ -55,14 +52,6 @@ class Directory {
 
 	getFiles() {
 		return this.data.files;
-	}
-
-	changeValidDir(newFunc) {
-		this.data.validDir = newFunc;
-	}
-
-	changeValidFile(newFunc) {
-		this.data.validFile = newFunc;
 	}
 }
 

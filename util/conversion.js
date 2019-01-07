@@ -40,65 +40,70 @@ function sumConvert(topDirectory, batchSize, batchProcessCallback) {
 	});
 }
 
-function qlwConvert(topDirectory, batchSize, batchProcessCallback) {
+function qlwConvert(qlwPositions, batchSize, batchProcessCallback) {
 	let batchData = [];
 	let batchNum = 0;
 
+
+
 	for (const [, dir] of topDirectory.getDirectories()) {
-		const files = dir.getFiles();
-		const dirs = dir.getDirectories();
-		if (files.has('MAP.cnd') && files.has('MapRawCond.mrc') && files.has('wd_spc_init.cnf')) {
-			const mapCondition = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
-			if (mapCondition.get('sem_data_version') !== '0')
-				console.warn(`Does not output sem_data_version 0. This may break things![${dir.getUri()}]\n`);
+		if (dir.getMeta(constants.dirTypes.metaKey) === constants.dirTypes.qlw) {
+//			const files = dir.getFiles();
+			const dirs = dir.getDirectories();
 
-			const mapRawCondition = conditions.mrcConditionsToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
-			if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
-				console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
+//			if (files.has('MAP.cnd') && files.has('MapRawCond.mrc') && files.has('wd_spc_init.cnf')) {
+				const mapCondition = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
+				if (mapCondition.get('sem_data_version') !== '0')
+					console.warn(`Does not output sem_data_version 0. This may break things![${dir.getUri()}]\n`);
 
-//			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
-//			if (wdSpcInit.get('sem_data_version') !== '1')
-//				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
+				const mapRawCondition = conditions.mrcConditionsToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
+				if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
+					console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
 
-			for (const [posName, pos] of dirs) {
-				if (posName.startsWith('Pos_')) {
-					const posFiles = pos.getFiles();
-					if (posFiles.has('data001.qlw') && posFiles.has('data001.cnd')) {
-						if (batchNum !== 0 && batchNum % batchSize === 0) {
-							batchProcessCallback(batchData, batchNum);
-							batchData = [];
-						}
+	//			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
+	//			if (wdSpcInit.get('sem_data_version') !== '1')
+	//				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
 
-						const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
-						if (positionCondition.get('sem_data_version') !== '0')
-							console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
+				for (const [, pos] of dirs) {
+//					if (posName.startsWith('Pos_')) {
+//						const posFiles = pos.getFiles();
+//						if (posFiles.has('data001.qlw') && posFiles.has('data001.cnd')) {
+							if (batchNum !== 0 && batchNum % batchSize === 0) {
+								batchProcessCallback(batchData, batchNum);
+								batchData = [];
+							}
 
-						let positionData = {
-							metadata: position(mapCondition, mapRawCondition, positionCondition),
-							probeData: []
-						};
+							const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
+							if (positionCondition.get('sem_data_version') !== '0')
+								console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
 
-						const qlwBytes = fs.readFileSync(`${pos.getUri()}/data001.qlw`, {encoding: null}).buffer;
+							let positionData = {
+								metadata: position(mapCondition, mapRawCondition, positionCondition),
+								probeData: []
+							};
 
-						// For some reason it only gives me 4095 points, and even then the first one is garbage
-						const qlwData = new BitView(qlwBytes, constants.qlw.dataByteOffset, (constants.qlw.arrayLength - 1) * 8);
+							const qlwBytes = fs.readFileSync(`${pos.getUri()}/data001.qlw`, {encoding: null}).buffer;
 
-						for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
-							positionData.probeData.push(qlwData.getFloat64((8 * 8 * i) + 32)); // Measured in bits
+							// For some reason it only gives me 4095 points, and even then the first one is garbage
+							const qlwData = new BitView(qlwBytes, constants.qlw.dataByteOffset, (constants.qlw.arrayLength - 1) * 8);
 
-						batchData.push(positionData);
-						batchNum++;
-					} else
-						console.warn(`Not processing, missing qlw position files. Make sure data001.cnd and data001.qlw are present [${pos.getUri()}]\n`);
-				} else
-					console.warn(`Skipping, identified as not a position. [${pos.getUri()}]\n`);
-			}
+							for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
+								positionData.probeData.push(qlwData.getFloat64((8 * 8 * i) + 32)); // Measured in bits
 
-		} else {
-			throw {
-				message: `Does not contain required files. Make sure all map condition files are present. [${dir.getUri()}]`,
-				code: 1
-			};
+							batchData.push(positionData);
+							batchNum++;
+//						} else
+//							console.warn(`Not processing, missing qlw position files. Make sure data001.cnd and data001.qlw are present or use '-f' to force data output (might not provide full metadata) [${pos.getUri()}]\n`);
+//					} else
+//						console.warn(`Skipping, identified as not a position or use '-f' to force data output (might not provide full metadata). [${pos.getUri()}]\n`);
+				}
+
+//			} else {
+//				throw {
+//					message: `Does not contain required files. Make sure all map condition files are present or use '-f' to force data output (might not provide full metadata). [${dir.getUri()}]`,
+//					code: 1
+//				};
+//			}
 		}
 	}
 
@@ -113,86 +118,88 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 	let batchNum = 0;
 
 	for (const [, dir] of topDirectory.getDirectories()) {
-		const files = dir.getFiles();
-		const dirs = dir.getDirectories();
-		if (files.has('MAP.cnd') && files.has('MapRawCond.mrc') && files.has('wd_spc_init.cnf')) {
-			const mapCondition = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
-			if (mapCondition.get('sem_data_version') !== '0')
-				console.warn(`Does not output sem_data_version 0. This may break things![${dir.getUri()}]\n`);
+		if (dir.getMeta(constants.dirTypes.metaKey) === constants.dirTypes.qlw) {
+//			const files = dir.getFiles();
+			const dirs = dir.getDirectories();
+//			if (files.has('MAP.cnd') && files.has('MapRawCond.mrc') && files.has('wd_spc_init.cnf')) {
+				const mapCondition = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
+				if (mapCondition.get('sem_data_version') !== '0')
+					console.warn(`Does not output sem_data_version 0. This may break things![${dir.getUri()}]\n`);
 
-			const mapRawCondition = conditions.mrcConditionsToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
-			if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
-				console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
+				const mapRawCondition = conditions.mrcConditionsToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
+				if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
+					console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
 
-//			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
-//			if (wdSpcInit.get('sem_data_version') !== '1')
-//				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
+				//			const wdSpcInit = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/wd_spc_init.cnf`));
+				//			if (wdSpcInit.get('sem_data_version') !== '1')
+				//				console.warn(`Does not output sem_data_version 1. This may break things![${dir.getUri()}]\n`);
 
-			for (const [posName, pos] of dirs) {
-				if (posName.startsWith('Pos_')) {
-					const posFiles = pos.getFiles();
-					if (posFiles.has('1.xes') && posFiles.has('data001.cnd')) {
-						if (batchNum !== 0 && batchNum % batchSize === 0) {
-							batchProcessCallback(batchData, batchNum);
-							batchData = [];
-						}
+				for (const [, pos] of dirs) {
+//					if (posName.startsWith('Pos_')) {
+//						const posFiles = pos.getFiles();
+//						if (posFiles.has('1.supportsXes') && posFiles.has('data001.cnd')) {
+							if (batchNum !== 0 && batchNum % batchSize === 0) {
+								batchProcessCallback(batchData, batchNum);
+								batchData = [];
+							}
 
-						const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
-						if (positionCondition.get('sem_data_version') !== '0')
-							console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
+							const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
+							if (positionCondition.get('sem_data_version') !== '0')
+								console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
 
-						let positionData = {
-							metadata: position(mapCondition, mapRawCondition, positionCondition),
-							probeData: [],
-							probeNoise: []
-						};
-
-						const BinByteLength = 4 * (Number.parseInt(positionData.metadata.get('binYLength')) + 1);
-						const TotalBinByteLength = BinByteLength * Number.parseInt(positionData.metadata.get('binsY'));
-
-						const xesBytes = fs.readFileSync(`${pos.getUri()}/1.xes`, {encoding: null}).buffer;
-
-						const xesHeader = new BitView(xesBytes, constants.xes.headerByteOffset, constants.xes.headerByteEnd);
-						if (xesHeader.getUint32(constants.xes.dataCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
-							throw {
-								message: 'xes file incorrectly read?',
-								code: 2
-							};
-						const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
-						const xesNoise = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset); // 2 byte offset on each end
-						if (xesNoise.getUint32(constants.xes.noiseCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
-							throw {
-								message: 'xes file incorrectly read?',
-								code: 2
+							let positionData = {
+								metadata: position(mapCondition, mapRawCondition, positionCondition),
+								probeData: [],
+								probeNoise: []
 							};
 
-						for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
-							let xesProbeData = [];
-							for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
-								xesProbeData.push(xesData.getUint32((BinByteLength * 8 * i) + (4 * 8 * k))); // Measured in bits
-							positionData.probeData.push(xesProbeData);
-						}
+							const BinByteLength = 4 * (Number.parseInt(positionData.metadata.get('binYLength')) + 1);
+							const TotalBinByteLength = BinByteLength * Number.parseInt(positionData.metadata.get('binsY'));
 
-						for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
-							let xesProbeNoise = [];
-							for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
-								xesProbeNoise.push(xesNoise.getUint32((BinByteLength * 8 * i) + (4 * 8 * k) + constants.xes.noiseDataOffset)); // Measured in bits
-							positionData.probeNoise.push(xesProbeNoise);
-						}
+							const xesBytes = fs.readFileSync(`${pos.getUri()}/1.xes`, {encoding: null}).buffer;
 
-						batchData.push(positionData);
-						batchNum++;
-					} else
-						console.warn(`Not processing, missing xes position files. Make sure data001.cnd and 1.xes are present [${pos.getUri()}]\n`);
-				} else
-					console.warn(`Skipping, identified as not a position. [${pos.getUri()}]\n`);
-			}
+							const xesHeader = new BitView(xesBytes, constants.xes.headerByteOffset, constants.xes.headerByteEnd);
+							if (xesHeader.getUint32(constants.xes.dataCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
+								throw {
+									message: 'supportsXes file incorrectly read?',
+									code: 2
+								};
+							const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
+							const xesNoise = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset); // 2 byte offset on each end
+							if (xesNoise.getUint32(constants.xes.noiseCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
+								throw {
+									message: 'supportsXes file incorrectly read?',
+									code: 2
+								};
 
-		} else {
-			throw {
-				message: `Does not contain required files. Make sure all map condition files are present. [${dir.getUri()}]`,
-				code: 1
-			};
+							for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
+								let xesProbeData = [];
+								for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
+									xesProbeData.push(xesData.getUint32((BinByteLength * 8 * i) + (4 * 8 * k))); // Measured in bits
+								positionData.probeData.push(xesProbeData);
+							}
+
+							for (let i = 0; i < positionData.metadata.get('binsY'); i++) {
+								let xesProbeNoise = [];
+								for (let k = 0; k < positionData.metadata.get('binYLength'); k++)
+									xesProbeNoise.push(xesNoise.getUint32((BinByteLength * 8 * i) + (4 * 8 * k) + constants.xes.noiseDataOffset)); // Measured in bits
+								positionData.probeNoise.push(xesProbeNoise);
+							}
+
+							batchData.push(positionData);
+							batchNum++;
+//						} else
+//							console.warn(`Not processing, missing supportsXes position files. Make sure data001.cnd and 1.supportsXes are present [${pos.getUri()}]\n`);
+//					} else
+//						console.warn(`Skipping, identified as not a position. [${pos.getUri()}]\n`);
+				}
+
+//			} else {
+//				throw {
+//					message: `Does not contain required files. Make sure all map condition files are present. [${dir.getUri()}]`,
+//					code: 1
+//				};
+//			}
 		}
 	}
 

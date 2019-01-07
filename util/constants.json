@@ -1,7 +1,7 @@
 {
   "tempUri": ".~conversionTemp",
   "batchSize": 200,
-  "xes": {
+  "supportsXes": {
     "headerByteOffset": 0,
     "headerByteEnd": 892,
     "dataByteOffset": 892,
@@ -14,5 +14,44 @@
   "qlw":{
     "arrayLength": 4096,
     "dataByteOffset" : 40
+  },
+  "classification": {
+    "qlw": {
+      "top": {
+        "mapCond": "MAP.cnd",
+        "mapRawCond": "MapRawCond.mrc",
+        "posDirStart": "Pos_"
+      },
+      "pos": {
+        "xesExt": ".xes",
+        "xes": "1.xes",
+        "qlwData": "data001.qlw",
+        "dataCond": "data001.cnd"
+      }
+    },
+    "map": {
+      "top": {
+        "posDir": "Pos_"
+      },
+      "pos": {
+        "mapCond": "MAP.cnd",
+        "mapRawCond": "MapRawCond.mrc",
+        "mapRawData": "MapRawData.mrd"
+      }
+    },
+    "line": {
+      "top": {
+        "posDir": "Pos_"
+      },
+      "pos": {
+
+      }
+    }
+  },
+  "dirTypes": {
+    "metaKey": "type",
+    "qlw": "qlw",
+    "map": "map",
+    "line": "lin"
   }
 }
