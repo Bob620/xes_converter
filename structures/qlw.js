@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 const conditions = require('../util/conditions');
 
 module.exports = class {
@@ -8,6 +10,10 @@ module.exports = class {
 			mapRawCondFile: settings.mapRawCond ? settings.mapRawCond : false,
 			mapCondFile: settings.mapCond ? settings.mapCond : false
 		}
+	}
+
+	totalPoints() {
+		return this.data.positions.size;
 	}
 
 	getDirectory() {

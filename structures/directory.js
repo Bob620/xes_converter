@@ -9,7 +9,8 @@ class Directory {
 			name: options.name ? options.name : uriName[uriName.length-1],
 			uri,
 			directories: new Map(),
-			files: new Map()
+			files: new Map(),
+			totalSubDirectories: 0
 		};
 
 		this.update();
@@ -22,20 +23,28 @@ class Directory {
 
 		for (const file of files) {
 			if (file.name) {
-				if (file.isDirectory())
-					this.data.directories.set(file.name, new Directory(`${this.data.uri}/${file.name}`, {name: file.name}));
-				else if (file.isFile())
+				if (file.isDirectory()) {
+					const dir = new Directory(`${this.data.uri}/${file.name}`, {name: file.name});
+					this.data.directories.set(file.name, dir);
+					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
+				} else if (file.isFile())
 					this.data.files.set(file.name, file);
 			} else {
 				let stats = fs.statSync(`${this.data.uri}/${file}`);
 				stats.name = file;
 
-				if (stats.isDirectory())
-					this.data.directories.set(file, new Directory(`${this.data.uri}/${file}`, {name: file}));
-				else if (stats.isFile())
+				if (stats.isDirectory()) {
+					const dir = new Directory(`${this.data.uri}/${file}`, {name: file});
+					this.data.directories.set(file, dir);
+					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
+				} else if (stats.isFile())
 					this.data.files.set(stats.name, stats);
 			}
 		}
+	}
+
+	totalSubDirectories() {
+		return this.data.totalSubDirectories;
 	}
 
 	getName() {

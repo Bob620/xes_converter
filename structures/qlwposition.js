@@ -21,16 +21,20 @@ module.exports = class {
 		return this.data.directory;
 	}
 
-	getMetadata() {
+	getDataCond() {
 		return conditions.cndStringToMap(fs.readFileSync(`${this.data.directory.getUri()}/${this.data.dataCondFile.name}`));
 	}
 
-	getqlwFile() {
-		return conversions.qlwFileToObject(this.data.qlwFile);
+	getQlwData() {
+		if (this.data.qlwFile)
+			return conversions.qlwFileToObject(`${this.data.directory.getUri()}/${this.data.qlwFile.name}`);
+		return false;
 	}
 
-	getXesFile() {
-		return conversions.xesFileToObject(this.data.xesFile);
+	getXesData() {
+		if (this.data.xesFile)
+			return conversions.xesFileToObject(`${this.data.directory.getUri()}/${this.data.xesFile.name}`);
+		return false;
 	}
 
 	setXes(xesFile) {

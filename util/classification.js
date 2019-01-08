@@ -2,16 +2,47 @@ const constants = require('./constants');
 
 const Qlw = require('../structures/qlw');
 const QlwPosition = require('../structures/qlwposition');
-const Map = require('../structures/map');
+const MapThing = require('../structures/map');
 
 module.exports = class {
 	constructor(options={}) {
 		this.data = {
 			options,
-			qlws: [],
-			maps: [],
-			lines: []
+			totalQlwPoints: 0,
+			qlws: new Map(),
+			maps: new Map(),
+			lines: new Map()
 		}
+	}
+
+	totalDirectories() {
+		let total = this.data.qlws.size;
+
+		for (const [uri] of this.data.maps)
+			if (!this.data.qlws.has(uri))
+				total++;
+
+		for (const [uri] of this.data.lines)
+			if (!this.data.qlw.has(uri) && !this.data.maps.has(uri))
+				total++;
+
+		return total;
+	}
+
+	totalQlws() {
+		return this.data.qlws.size;
+	}
+
+	totalQlwPoints() {
+		return this.data.totalQlwPoints;
+	}
+
+	totalMaps() {
+		return this.data.maps.size;
+	}
+
+	totalLines() {
+		return this.data.lines.size;
 	}
 
 	getQlws() {
@@ -48,12 +79,14 @@ module.exports = class {
 		if (this.data.options.line)
 			line = lineTopFilter(directory, this.data.options.loose);
 
-		if (qlw)
-			this.data.qlws.push(qlw);
+		if (qlw) {
+			this.data.qlws.set(directory.getUri(), qlw);
+			this.data.totalQlwPoints += qlw.totalPoints();
+		}
 		if (map)
-			this.data.maps.push(map);
+			this.data.maps.set(directory.getUri(), map);
 		if (line)
-			this.data.lines.push(line);
+			this.data.lines.set(directory.getUri(), line);
 	}
 };
 
@@ -163,7 +196,7 @@ function mapPositionFilter(directory, strict) {
 	if (strict && !output.mapCond)
 		return false;
 
-	let map = new Map(directory);
+	let map = new MapThing(directory);
 
 	map.setMapCond(output.mapCond);
 	map.setMapRawCond(output.mapRawCond);

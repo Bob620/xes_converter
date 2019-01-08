@@ -180,7 +180,7 @@ else {
 //			if (options.force)
 //				topDirectory = new Directory(options.topDirectoryUri, {});
 //			else
-				topDirectory = new Directory(options.topDirectoryUri);/*, {
+			topDirectory = new Directory(options.topDirectoryUri);/*, {
 					validDir: dir => {
 						return dir.name.endsWith('_QLW') || dir.name.endsWith('_MAP') || dir.name.endsWith('_LIN')
 					},
@@ -218,82 +218,149 @@ else {
 
 			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
+			console.log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
+			console.log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
+
 			if (options.xes || options.qlw || options.sum || options.qmap) {
 				const startTime = Date.now();
 				console.log('Processing qlw directories...');
 
 				const qlws = classify.getQlws();
+				const maps = classify.getMaps();
 
-				for (const qlw of qlws) {
-					qlw
+				let items = [];
+				let totalLength = 0;
+				let batchLength = 0;
+
+				for (const [uri, qlw] of qlws) {
+					if (options.qmap)
+						if (maps.has(uri)) {
+
+						}
+
+					if (options.qlw) {
+						let qlwData = {
+							mapCond: qlw.getMapCond(),
+							mapRawCond: qlw.getMapRawCond(),
+							positions: []
+						};
+
+						const positions = qlw.getPositions();
+
+						for (const [, position] of positions) {
+							if (batchLength >= options.batchSize) {
+								if (batchLength > 0) {
+									items.push(qlwData);
+
+									totalLength += batchLength;
+									//csv.writeQlwToFile(`${baseFileName}/${batches * constants.batchSize}`, items);
+
+									batchLength = 0;
+									items = [];
+									qlwData.positions = [];
+								}
+							}
+
+							qlwData.positions.push({
+								dataCond: position.getDataCond(),
+								qlwData: position.getQlwData()
+							});
+							batchLength++;
+						}
+
+						items.push(qlwData);
+					}
+
+					if (options.xes) {
+
+						if (options.sum) {
+
+						}
+					}
+
+					if (options.sum && !options.xes) {
+
+					}
 				}
+
+				if (batchLength > 0) {
+					totalLength += batchLength;
+					//csv.writeQlwToFile(`${baseFileName}/${totalLength + batchLength}`, items);
+
+					items = [];
+				}
+
+				console.log(`Finished processing qlw directories in ${(Date.now() - startTime)/1000} seconds`);
+				console.log(`Processed ${totalLength} ${totalLength === 1 ? 'directory' : 'directories'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
 			}
+			/*
+						if (options.xes) {
+							const startTime = Date.now();
+							console.log('Processing xes files...');
 
-			if (options.xes) {
-				const startTime = Date.now();
-				console.log('Processing xes files...');
+							const batchSize = options.batchSize;
 
-				const batchSize = options.batchSize;
+							let startBatchConvert = Date.now();
+							const totalPositions = commands.xesConvert(topDirectory, batchSize, (batchData, batchNumber) => {
+								let batchConverted = batchSize;
+								let totalConverted = batchNumber;
+								if (batchNumber % batchSize) {
+									batchConverted = batchNumber % batchSize;
+									totalConverted = batchNumber - batchSize;
+								}
 
-				let startBatchConvert = Date.now();
-				const totalPositions = commands.xesConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-					let batchConverted = batchSize;
-					let totalConverted = batchNumber;
-					if (batchNumber % batchSize) {
-						batchConverted = batchNumber % batchSize;
-						totalConverted = batchNumber - batchSize;
+								csv.writeXesToFile(`${baseFileName}_xes_output_${totalConverted}.csv`, batchData);
+								console.log(`Converted ${batchConverted} xes files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
+								startBatchConvert = Date.now();
+								if (options.sum) {
+									csv.writeXesToFile(`${baseFileName}_sum_output_${totalConverted}.csv`, commands.sumFromXes(batchData));
+									console.log(`Converted ${batchConverted} xes files to sum cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
+									startBatchConvert = Date.now();
+								}
+							});
+
+							const timePassed = (Date.now() - startTime) / 1000;
+
+							console.log(`Finished converting ${totalPositions} xes files to csv in ${timePassed} (${baseFileName}_xes_output_BATCH.csv)`);
+
+							if (options.sum)
+								console.log(`Finished converting ${totalPositions} xes to sum csv in ${timePassed} (${baseFileName}_sum_output_BATCH.csv)`);
+						}
+
+						if (options.qlw) {
+							const startTime = Date.now();
+							console.log('Processing qlw files...');
+
+							const batchSize = options.batchSize;
+
+							let startBatchConvert = Date.now();
+							const totalPositions = commands.qlwConvert(topDirectory, batchSize, (batchData, batchNumber) => {
+								csv.writeQlwToFile(`${baseFileName}_qlw_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
+								console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} qlw files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
+								startBatchConvert = Date.now();
+							});
+
+							console.log(`Finished converting ${totalPositions} qlw to csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_qlw_output_BATCH.csv)`);
+						}
+
+						if (options.sum && !options.xes) {
+							const startTime = Date.now();
+							console.log('Processing supportsXes files...');
+
+							const batchSize = options.batchSize;
+
+							let startBatchConvert = Date.now();
+							const totalPositions = commands.sumConvert(topDirectory, batchSize, (batchData, batchNumber) => {
+								csv.writeXesToFile(`${baseFileName}_sum_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
+								console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} xes files to sum cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
+								startBatchConvert = Date.now();
+							});
+
+							console.log(`Finished converting ${totalPositions} xes to sum csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_sum_output_BATCH.csv)`);
+						}
+						console.log(`All files processed in ${(Date.now() - initialStartTime) / 1000}.`);
 					}
-
-					csv.writeXesToFile(`${baseFileName}_xes_output_${totalConverted}.csv`, batchData);
-					console.log(`Converted ${batchConverted} xes files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-					startBatchConvert = Date.now();
-					if (options.sum) {
-						csv.writeXesToFile(`${baseFileName}_sum_output_${totalConverted}.csv`, commands.sumFromXes(batchData));
-						console.log(`Converted ${batchConverted} xes files to sum cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-						startBatchConvert = Date.now();
-					}
-				});
-
-				const timePassed = (Date.now() - startTime) / 1000;
-
-				console.log(`Finished converting ${totalPositions} xes files to csv in ${timePassed} (${baseFileName}_xes_output_BATCH.csv)`);
-
-				if (options.sum)
-					console.log(`Finished converting ${totalPositions} xes to sum csv in ${timePassed} (${baseFileName}_sum_output_BATCH.csv)`);
-			}
-
-			if (options.qlw) {
-				const startTime = Date.now();
-				console.log('Processing qlw files...');
-
-				const batchSize = options.batchSize;
-
-				let startBatchConvert = Date.now();
-				const totalPositions = commands.qlwConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-					csv.writeQlwToFile(`${baseFileName}_qlw_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
-					console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} qlw files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-					startBatchConvert = Date.now();
-				});
-
-				console.log(`Finished converting ${totalPositions} qlw to csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_qlw_output_BATCH.csv)`);
-			}
-
-			if (options.sum && !options.xes) {
-				const startTime = Date.now();
-				console.log('Processing supportsXes files...');
-
-				const batchSize = options.batchSize;
-
-				let startBatchConvert = Date.now();
-				const totalPositions = commands.sumConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-					csv.writeXesToFile(`${baseFileName}_sum_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
-					console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} xes files to sum cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-					startBatchConvert = Date.now();
-				});
-
-				console.log(`Finished converting ${totalPositions} xes to sum csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_sum_output_BATCH.csv)`);
-			}
-			console.log(`All files processed in ${(Date.now() - initialStartTime) / 1000}.`);
+					*/
 		}
 	} catch(err) {
 		console.error(err);
