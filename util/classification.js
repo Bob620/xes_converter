@@ -61,25 +61,28 @@ function qlwTopFilter(directory, strict=true) {
 	const files = directory.getFiles();
 	const directories = directory.getDirectories();
 
+	let output = {
+		mapRawCond: files.get(constants.classification.qlw.top.mapRawCond),
+		mapCond: files.get(constants.classification.qlw.top.mapCond)
+	};
+
 	// Loose tests
-	if (!files.has(constants.classification.qlw.top.mapRawCond))
+	if (!output.mapRawCond)
 		return false;
 
 	// Strict tests
-	if (strict && !files.has(constants.classification.qlw.top.mapCond))
+	if (strict && !output.mapCond)
 		return false;
 
-	let qlw = new Qlw(directory);
+	let qlw = new Qlw(directory, output);
 
 	// Optional tests
 	for (const [, dir] of directories) {
 		const output = qlwPositionFind(dir, strict);
 
 		if (output) {
-			let pos = new QlwPosition(dir);
+			let pos = new QlwPosition(dir, output);
 
-			pos.setQlwData(output.qlwData);
-			pos.setDataCond(output.dataCond);
 			pos.setXes(xesPositionFind(dir, strict));
 			qlw.setPosition(pos);
 		}

@@ -1,11 +1,14 @@
 const fs = require('fs');
 
+const conditions = require('../util/conditions');
+const conversions = require('../util/conversions');
+
 module.exports = class {
-	constructor(directory) {
+	constructor(directory, settings={}) {
 		this.data = {
 			directory,
-			qlwFile: false,
-			dataCondFile: false,
+			qlwFile: settings.qlwData ? settings.qlwData : false,
+			dataCondFile: settings.dataCond ? settings.dataCond : false,
 			xesFile: false
 		}
 	}
@@ -19,22 +22,18 @@ module.exports = class {
 	}
 
 	getMetadata() {
-		return fs.readFileSync(`${this.data.directory.getUri()}/${this.data.dataFile.name}`);
+		return conditions.cndStringToMap(fs.readFileSync(`${this.data.directory.getUri()}/${this.data.dataCondFile.name}`));
+	}
+
+	getqlwFile() {
+		return conversions.qlwFileToObject(this.data.qlwFile);
 	}
 
 	getXesFile() {
-		return this.data.xesFile;
+		return conversions.xesFileToObject(this.data.xesFile);
 	}
 
 	setXes(xesFile) {
 		this.data.xesFile = xesFile;
-	}
-
-	setQlwData(qlwFile) {
-		this.data.qlwFile = qlwFile;
-	}
-
-	setDataCond(dataFile) {
-		this.data.dataCondFile = dataFile;
 	}
 };

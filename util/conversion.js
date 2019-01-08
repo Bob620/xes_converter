@@ -52,11 +52,11 @@ function qlwConvert(qlwPositions, batchSize, batchProcessCallback) {
 			const dirs = dir.getDirectories();
 
 //			if (files.has('MAP.cnd') && files.has('MapRawCond.mrc') && files.has('wd_spc_init.cnf')) {
-				const mapCondition = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
+				const mapCondition = conditions.cndStringToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
 				if (mapCondition.get('sem_data_version') !== '0')
 					console.warn(`Does not output sem_data_version 0. This may break things![${dir.getUri()}]\n`);
 
-				const mapRawCondition = conditions.mrcConditionsToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
+				const mapRawCondition = conditions.mrcStringToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
 				if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
 					console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
 
@@ -73,7 +73,7 @@ function qlwConvert(qlwPositions, batchSize, batchProcessCallback) {
 								batchData = [];
 							}
 
-							const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
+							const positionCondition = conditions.cndStringToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
 							if (positionCondition.get('sem_data_version') !== '0')
 								console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
 
@@ -122,11 +122,11 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 //			const files = dir.getFiles();
 			const dirs = dir.getDirectories();
 //			if (files.has('MAP.cnd') && files.has('MapRawCond.mrc') && files.has('wd_spc_init.cnf')) {
-				const mapCondition = conditions.cndConditionsToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
+				const mapCondition = conditions.cndStringToMap(fs.readFileSync(`${dir.getUri()}/MAP.cnd`));
 				if (mapCondition.get('sem_data_version') !== '0')
 					console.warn(`Does not output sem_data_version 0. This may break things![${dir.getUri()}]\n`);
 
-				const mapRawCondition = conditions.mrcConditionsToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
+				const mapRawCondition = conditions.mrcStringToMap(fs.readFileSync(`${dir.getUri()}/MapRawCond.mrc`));
 				if (mapRawCondition.get('map_raw_condition').get('version') !== '1')
 					console.warn(`Does not output map_raw_condition version 1. This may break things![${dir.getUri()}]\n`);
 
@@ -143,7 +143,7 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 								batchData = [];
 							}
 
-							const positionCondition = conditions.cndConditionsToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
+							const positionCondition = conditions.cndStringToMap(fs.readFileSync(`${pos.getUri()}/data001.cnd`));
 							if (positionCondition.get('sem_data_version') !== '0')
 								console.warn(`Does not output sem_data_version 0. This may break things![${pos.getUri()}]\n`);
 
@@ -161,14 +161,14 @@ function xesConvert(topDirectory, batchSize, batchProcessCallback) {
 							const xesHeader = new BitView(xesBytes, constants.xes.headerByteOffset, constants.xes.headerByteEnd);
 							if (xesHeader.getUint32(constants.xes.dataCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
 								throw {
-									message: 'supportsXes file incorrectly read?',
+									message: 'xes file incorrectly read?',
 									code: 2
 								};
 							const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
 							const xesNoise = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset); // 2 byte offset on each end
 							if (xesNoise.getUint32(constants.xes.noiseCheckOffset) !== Number.parseInt(positionData.metadata.get('binYLength')) + 1)
 								throw {
-									message: 'supportsXes file incorrectly read?',
+									message: 'xes file incorrectly read?',
 									code: 2
 								};
 

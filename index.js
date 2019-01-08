@@ -18,11 +18,17 @@ function help() {
 	console.log('Usage: xes_converter [options] [directory]\n');
 	console.log('Options:');
 	console.log('-v, --version                    \tDisplays the version information');
-	console.log('-x, --supportsXes                        \tConverts the supportsXes files into an output file located in the directory given');
+	console.log('-x, --xes                        \tConverts the xes files into an output file located in the directory given');
 	console.log('-q, --qlw                        \tConverts the qlw files into an output file located in the directory given');
-	console.log('-s, --sum                        \tConverts the supportsXes files into an sum file (like qlw) located in the directory given');
+	console.log('-s, --sum                        \tConverts the xes files into an sum file located in the directory given');
+	console.log('-m, --map                        \tConverts the map directories to csv');
+	console.log('-l, --line                       \tConverts the lin directories to csv');
+	console.log('-a, --all                        \tOutputs all data (-xqsmlk)');
+	console.log('-k, --qmap                       \tOutputs maps for each qlw directory');
+	console.log('-j, --loose                      \tTurns off strict checks on directories and file names');
 	console.log('-f, --force                      \tForces data output even with missing metadata');
 	console.log('-e, --explore                    \tExplores and assumes output data wanted');
+	console.log('-d, --debug                      \tEnabled debugging text');
 	console.log('-h, --help                       \tProvides this text');
 	console.log('-o [uri], --output [uri]         \tOutput directory uri');
 	console.log(`-b [number], --batchsize [number]\tThe number of positions per output file, default: ${constants.batchSize}`);
@@ -35,11 +41,13 @@ let options = {
 	xes: false,
 	qlw: false,
 	sum: false,
+	map: false,
+	line: false,
+	qmap: false,
 	help: false,
 	version: false,
 	loose: false,
-	map: false,
-	line: false
+	debug: false
 };
 
 for (let i = 2; i < process.argv.length; i++) {
@@ -51,11 +59,28 @@ for (let i = 2; i < process.argv.length; i++) {
 			case '--sum':
 				options.sum = true;
 				break;
-			case '--supportsXes':
+			case '--xes':
 				options.xes = true;
 				break;
 			case '--qlw':
 				options.qlw = true;
+				break;
+			case '--map':
+				options.map = true;
+				break;
+			case '--line':
+				options.line = true;
+				break;
+			case '--all':
+				options.qlw = true;
+				options.xes = true;
+				options.sum = true;
+				options.map = true;
+				options.line = true;
+				options.qmap = true;
+				break;
+			case '--qmap':
+				options.qmap = true;
 				break;
 			case '--help':
 				options.help = true;
@@ -69,6 +94,8 @@ for (let i = 2; i < process.argv.length; i++) {
 			case '--loose':
 				options.loose = true;
 				break;
+			case '--debug':
+				options.debug = true;
 		}
 	} else if (process.argv[i].startsWith('-')) {
 		switch (process.argv[i]) {
@@ -93,12 +120,31 @@ for (let i = 2; i < process.argv.length; i++) {
 						case 'q':
 							options.qlw = true;
 							break;
+						case 'm':
+							options.map = true;
+							break;
+						case 'l':
+							options.line = true;
+							break;
+						case 'a':
+							options.qlw = true;
+							options.xes = true;
+							options.sum = true;
+							options.map = true;
+							options.line = true;
+							options.qmap = true;
+							break;
+						case 'k':
+							options.qmap = true;
+							break;
 						case 'h':
 							options.help = true;
 							break;
-						case 'l':
+						case 'j':
 							options.loose = true;
 							break;
+						case 'd':
+							options.debug = true;
 					}
 				break;
 		}
@@ -108,6 +154,15 @@ for (let i = 2; i < process.argv.length; i++) {
 
 if (options.topDirectoryUri === '' && !options.xes && !options.qlw && !options.sum && !options.version)
 	options.help = true;
+
+if (!options.xes && !options.qlw && !options.sum)
+	options.xes = true;
+
+if (options.debug)
+	process.env.NODE_ENV = 'debug';
+else
+	process.env.NODE_ENV = 'production';
+
 
 if (options.help)
 	help();
@@ -163,12 +218,20 @@ else {
 
 			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
-			if (!options.qlw && !options.xes && !options.sum)
-				options.xes = true;
+			if (options.xes || options.qlw || options.sum || options.qmap) {
+				const startTime = Date.now();
+				console.log('Processing qlw directories...');
+
+				const qlws = classify.getQlws();
+
+				for (const qlw of qlws) {
+					qlw
+				}
+			}
 
 			if (options.xes) {
 				const startTime = Date.now();
-				console.log('Processing supportsXes files...');
+				console.log('Processing xes files...');
 
 				const batchSize = options.batchSize;
 

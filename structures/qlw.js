@@ -1,9 +1,12 @@
+const conditions = require('../util/conditions');
+
 module.exports = class {
-	constructor(directory, positions=new Map()) {
+	constructor(directory, settings={}, positions=new Map()) {
 		this.data = {
 			directory,
-			metadata: new Map(),
-			positions
+			positions,
+			mapRawCondFile: settings.mapRawCond ? settings.mapRawCond : false,
+			mapCondFile: settings.mapCond ? settings.mapCond : false
 		}
 	}
 
@@ -19,12 +22,12 @@ module.exports = class {
 		return this.data.positions.get(pointName);
 	}
 
-	getMetadata() {
-		return this.data.metadata
+	getMapCond() {
+		return conditions.cndStringToMap(fs.readFileSync(`${this.data.directory.getUri()}/${this.data.mapCondFile.name}`));
 	}
 
-	getMetaValue(key) {
-		return this.data.metadata.get(key);
+	getMapRawCond() {
+		return conditions.mrcStringToMap(fs.readFileSync(`${this.data.directory.getUri()}/${this.data.mapRawCondFile.name}`));
 	}
 
 	setPosition(position) {

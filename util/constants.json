@@ -1,7 +1,7 @@
 {
   "tempUri": ".~conversionTemp",
   "batchSize": 200,
-  "supportsXes": {
+  "xes": {
     "headerByteOffset": 0,
     "headerByteEnd": 892,
     "dataByteOffset": 892,

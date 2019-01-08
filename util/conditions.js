@@ -1,5 +1,5 @@
 module.exports = {
-	cndConditionsToMap: file => {
+	cndStringToMap: file => {
 		let cndRegex = /^\$(.*?) (.*$)/gmi;
 		let conditions = new Map();
 
@@ -15,7 +15,7 @@ module.exports = {
 
 		return conditions;
 	},
-	mrcConditionsToMap: file => {
+	mrcStringToMap: file => {
 		let mrcRegex = /(^(.*?)=(.*$)|^\[(.*)]$)/gmi;
 		let conditions = new Map();
 		let currentCondition;
