@@ -216,7 +216,7 @@ else {
 
 			classify.exploreDirectory(topDirectory);
 
-			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
+			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}`;
 
 			console.log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
 			console.log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
@@ -253,7 +253,7 @@ else {
 									items.push(qlwData);
 
 									totalLength += batchLength;
-									//csv.writeQlwToFile(`${baseFileName}/${batches * constants.batchSize}`, items);
+									csv.writeQlwToFile(`${baseFileName}/${topDirectory.getName().toLowerCase()}-${totalLength}.csv`, items);
 
 									batchLength = 0;
 									items = [];
@@ -285,13 +285,13 @@ else {
 
 				if (batchLength > 0) {
 					totalLength += batchLength;
-					//csv.writeQlwToFile(`${baseFileName}/${totalLength + batchLength}`, items);
+					csv.writeQlwToFile(`${baseFileName}/${topDirectory.getName().toLowerCase()}-${totalLength}.csv`, items);
 
 					items = [];
 				}
 
 				console.log(`Finished processing qlw directories in ${(Date.now() - startTime)/1000} seconds`);
-				console.log(`Processed ${totalLength} ${totalLength === 1 ? 'directory' : 'directories'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
+				console.log(`Processed ${totalLength} ${totalLength === 1 ? 'position' : 'positions'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
 			}
 			/*
 						if (options.xes) {
