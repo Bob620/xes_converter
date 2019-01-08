@@ -216,7 +216,7 @@ else {
 
 			classify.exploreDirectory(topDirectory);
 
-			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}`;
+			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
 			console.log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
 			console.log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
@@ -253,7 +253,10 @@ else {
 									items.push(qlwData);
 
 									totalLength += batchLength;
-									csv.writeQlwToFile(`${baseFileName}/${topDirectory.getName().toLowerCase()}-${totalLength}.csv`, items);
+									if (options.qlw)
+										csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
+									if (options.xes)
+                                        csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 
 									batchLength = 0;
 									items = [];
@@ -261,10 +264,16 @@ else {
 								}
 							}
 
-							qlwData.positions.push({
-								dataCond: position.getDataCond(),
-								qlwData: position.getQlwData()
-							});
+                            let pos = {
+                                dataCond: position.getDataCond(),
+                            };
+
+							if (options.qlw)
+                                pos['qlwData'] = position.getQlwData();
+                            if (options.xes)
+                                pos['xesData'] = position.getXesData();
+
+							qlwData.positions.push(pos);
 							batchLength++;
 						}
 
@@ -285,7 +294,10 @@ else {
 
 				if (batchLength > 0) {
 					totalLength += batchLength;
-					csv.writeQlwToFile(`${baseFileName}/${topDirectory.getName().toLowerCase()}-${totalLength}.csv`, items);
+                    if (options.qlw)
+                        csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
+                    if (options.xes)
+                        csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 
 					items = [];
 				}
