@@ -202,7 +202,7 @@ else {
 
 						}
 
-					if (options.qlw) {
+					if (options.qlw || options.xes || options.sum) {
 						let qlwData = {
 							mapCond: qlw.getMapCond(),
 							mapRawCond: qlw.getMapRawCond(),
@@ -213,21 +213,17 @@ else {
 
 						for (const [, position] of positions) {
 							if (batchLength >= options.batchSize) {
-								if (batchLength > 0) {
-									items.push(qlwData);
+								items.push(qlwData);
 
-									totalLength += batchLength;
-									if (options.qlw)
-										csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
-									if (options.xes)
-                                        csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
-									if (options.sum)
+								totalLength += batchLength;
+								if (options.qlw)
+									csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
+								if (options.xes)
+                                    csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 
-
-									batchLength = 0;
-									items = [];
-									qlwData.positions = [];
-								}
+								batchLength = 0;
+								items = [];
+								qlwData.positions = [];
 							}
 
                             let pos = {
@@ -236,8 +232,8 @@ else {
 
 							if (options.qlw)
                                 pos['qlwData'] = position.getQlwData();
-                            if (options.xes)
-                                pos['xesData'] = position.getXesData();
+                            if (options.xes )
+	                            pos['xesData'] = position.getXesData();
                             if (options.sum)
                             	pos['sumData'] = position.getSumData(pos['xesData']);
 

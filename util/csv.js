@@ -60,6 +60,6 @@ module.exports = {
                 }
             }
 
-        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : elem).join(',')).join('\n'));
+        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, '') : elem).join(',')).join('\n'));
     }
 };

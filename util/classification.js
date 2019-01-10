@@ -155,12 +155,12 @@ function xesPositionFind(directory, strict) {
 		return defaultXesFile;
 
 	// Loose tests
-	else
+	if (!strict)
 		if (defaultXesFile)
 			return defaultXesFile;
 		else
 			for (const [fileName, file] of files)
-				if (!fileName.endsWith(constants.classification.qlw.pos.xesExt))
+				if (fileName.endsWith(constants.classification.qlw.pos.xesExt))
 					return file;
 
 	return false;

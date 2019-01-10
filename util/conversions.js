@@ -20,8 +20,12 @@ const conversions = {
 		// Sum all the data and noise
 		for (let i = 0; i < binXLength; i++) {
 			for (let k = 0; k < binsY; k++) {
-				output.data += xes.data[k][i];
-				output.noise += xes.noise[k][i];
+				if (!output.data[i])
+					output.data[i] = 0;
+				if (output.noise[i])
+					output.noise[i] = 0;
+				output.data[i] += xes.data[k][i];
+				output.noise[i] += xes.noise[k][i];
 			}
 		}
 
@@ -55,14 +59,8 @@ const conversions = {
         const BinByteLength = 4 * (binXLength + 1);
         const TotalBinByteLength = BinByteLength * binsY;
 
-        let xesData;
-
-        try {
-	        // Doesn't start at 0, some basic metadata and blank space covered by the header
-	        xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
-        } catch(err) {
-        	console.log(err);
-        }
+        // Doesn't start at 0, some basic metadata and blank space covered by the header
+		const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
 
 		// 2 byte offset on each end and some metadata at the start
 		const xesNoise = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset);

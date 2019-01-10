@@ -32,9 +32,19 @@ module.exports = class {
 	}
 
 	getXesData() {
-		if (this.data.xesFile)
+		if (this.data.xesFile || this.data.xesFile === 'undefined')
 			return conversions.xesFileToObject(`${this.data.directory.getUri()}/${this.data.xesFile.name}`);
-		return false;
+
+		let output = {
+			data: [],
+			noise: []
+		};
+
+		for (let i = 0; i < 2048; i++) {
+			output.data.push(0);
+			output.noise.push(0);
+		}
+		return output;
 	}
 
 	getSumData(xesObject) {
