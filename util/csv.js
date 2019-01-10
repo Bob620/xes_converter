@@ -28,7 +28,7 @@ module.exports = {
                     lines[i + metaLines].push(qlwData[i]);
             }
 
-        fs.writeFileSync(fileUri, lines.map(line => line === undefined ? '' : line).map(line => line.join(',')).join('\n'));
+        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));
     },
     writeXesToFile: (fileUri, items) => {
         let lines = [];
@@ -60,6 +60,6 @@ module.exports = {
                 }
             }
 
-        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, '') : elem).join(',')).join('\n'));
+        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));
     }
 };
