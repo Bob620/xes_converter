@@ -4,12 +4,28 @@ const constants = require('./constants');
 const BitView = require('bit-buffer').BitView;
 
 
-module.exports = {
-	xesFileToSum: () => {
-
+const conversions = {
+	xesFileToSum: (fileUri) => {
+		return conversions.xesObjectToSum(conversions.xesFileToObject(fileUri));
 	},
-	xesObjectToSum: () => {
+	xesObjectToSum: (xes) => {
+		let output = {
+			data: [],
+			noise: []
+		};
 
+		const binsY = xes.data.length;
+		const binXLength = xes.data[0].length;
+
+		// Sum all the data and noise
+		for (let i = 0; i < binXLength; i++) {
+			for (let k = 0; k < binsY; k++) {
+				output.data += xes.data[k][i];
+				output.noise += xes.noise[k][i];
+			}
+		}
+
+		return output;
 	},
 	xesFileToObject: (fileUri) => {
 		if (!fileUri)
@@ -39,8 +55,14 @@ module.exports = {
         const BinByteLength = 4 * (binXLength + 1);
         const TotalBinByteLength = BinByteLength * binsY;
 
-		// Doesn't start at 0, some basic metadata and blank space covered by the header
-		const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
+        let xesData;
+
+        try {
+	        // Doesn't start at 0, some basic metadata and blank space covered by the header
+	        xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
+        } catch(err) {
+        	console.log(err);
+        }
 
 		// 2 byte offset on each end and some metadata at the start
 		const xesNoise = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset);
@@ -100,3 +122,5 @@ module.exports = {
 
 	}
 };
+
+module.exports = conversions;

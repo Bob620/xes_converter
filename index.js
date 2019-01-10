@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 const Directory = require('./structures/directory');
-const commands = require('./util/conversion');
+const conversions = require('./util/conversions');
 const csv = require('./util/csv');
 const Classify = require('./util/classification');
 
@@ -175,43 +175,7 @@ else {
 		else {
 			console.log('Preparing...');
 			const initialStartTime = Date.now();
-			let topDirectory;
-
-//			if (options.force)
-//				topDirectory = new Directory(options.topDirectoryUri, {});
-//			else
-			topDirectory = new Directory(options.topDirectoryUri);/*, {
-					validDir: dir => {
-						return dir.name.endsWith('_QLW') || dir.name.endsWith('_MAP') || dir.name.endsWith('_LIN')
-					},
-					afterDirFilter: dir => {
-						const name = dir.getName();
-
-						if ((options.qlw || options.xes || options.sum) && name.endsWith('_QLW')) {
-							const filteredDir = dirChecks.qlwTopFilter(dir, options);
-
-							if (filteredDir) {
-								filteredDir.setMeta(constants.dirTypes.metaKey, constants.dirTypes.qlw);
-								return filteredDir;
-							}
-						} else if (options.map && name.endsWith('_MAP')) {
-							const filteredDir = dirChecks.mapTopFilter(dir, options);
-
-							if (filteredDir) {
-								filteredDir.setMeta(constants.dirTypes.metaKey, constants.dirTypes.map);
-								return filteredDir;
-							}
-						} else if (options.line && name.endsWith('_LIN')) {
-							const filteredDir = dirChecks.lineTopFilter(dir, options);
-
-							if (filteredDir) {
-								filteredDir.setMeta(constants.dirTypes.metaKey, constants.dirTypes.line);
-								return filteredDir;
-							}
-						}
-					}
-				});*/
-
+			const topDirectory = new Directory(options.topDirectoryUri);
 			const classify = new Classify(options);
 
 			classify.exploreDirectory(topDirectory);
@@ -257,6 +221,8 @@ else {
 										csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
 									if (options.xes)
                                         csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+									if (options.sum)
+
 
 									batchLength = 0;
 									items = [];
@@ -272,6 +238,8 @@ else {
                                 pos['qlwData'] = position.getQlwData();
                             if (options.xes)
                                 pos['xesData'] = position.getXesData();
+                            if (options.sum)
+                            	pos['sumData'] = position.getSumData(pos['xesData']);
 
 							qlwData.positions.push(pos);
 							batchLength++;
