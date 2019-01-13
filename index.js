@@ -12,7 +12,7 @@ const constants = require('./util/constants');
 // This seems to be how things work:
 // .cnd - sem_data_version 0
 // .mrc - map_raw_condition version 1
-// .cnf - sem_data-version 1
+// .cnf - sem_data_version 1
 
 function help() {
 	console.log('Usage: xes_converter [options] [directory]\n');
@@ -163,11 +163,11 @@ if (options.debug)
 else
 	process.env.NODE_ENV = 'production';
 
+if (options.version)
+	console.log(require('./package').version);
 
 if (options.help)
 	help();
-else if (options.version)
-	console.log(require('./package').version);
 else {
 	try {
 		if (!options.topDirectoryUri)
@@ -279,74 +279,6 @@ else {
 				console.log(`Finished processing qlw directories in ${(Date.now() - startTime)/1000} seconds`);
 				console.log(`Processed ${totalLength} ${totalLength === 1 ? 'position' : 'positions'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
 			}
-			/*
-						if (options.xes) {
-							const startTime = Date.now();
-							console.log('Processing xes files...');
-
-							const batchSize = options.batchSize;
-
-							let startBatchConvert = Date.now();
-							const totalPositions = commands.xesConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-								let batchConverted = batchSize;
-								let totalConverted = batchNumber;
-								if (batchNumber % batchSize) {
-									batchConverted = batchNumber % batchSize;
-									totalConverted = batchNumber - batchSize;
-								}
-
-								csv.writeXesToFile(`${baseFileName}_xes_output_${totalConverted}.csv`, batchData);
-								console.log(`Converted ${batchConverted} xes files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-								startBatchConvert = Date.now();
-								if (options.sum) {
-									csv.writeXesToFile(`${baseFileName}_sum_output_${totalConverted}.csv`, commands.sumFromXes(batchData));
-									console.log(`Converted ${batchConverted} xes files to sum cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-									startBatchConvert = Date.now();
-								}
-							});
-
-							const timePassed = (Date.now() - startTime) / 1000;
-
-							console.log(`Finished converting ${totalPositions} xes files to csv in ${timePassed} (${baseFileName}_xes_output_BATCH.csv)`);
-
-							if (options.sum)
-								console.log(`Finished converting ${totalPositions} xes to sum csv in ${timePassed} (${baseFileName}_sum_output_BATCH.csv)`);
-						}
-
-						if (options.qlw) {
-							const startTime = Date.now();
-							console.log('Processing qlw files...');
-
-							const batchSize = options.batchSize;
-
-							let startBatchConvert = Date.now();
-							const totalPositions = commands.qlwConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-								csv.writeQlwToFile(`${baseFileName}_qlw_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
-								console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} qlw files to cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-								startBatchConvert = Date.now();
-							});
-
-							console.log(`Finished converting ${totalPositions} qlw to csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_qlw_output_BATCH.csv)`);
-						}
-
-						if (options.sum && !options.xes) {
-							const startTime = Date.now();
-							console.log('Processing supportsXes files...');
-
-							const batchSize = options.batchSize;
-
-							let startBatchConvert = Date.now();
-							const totalPositions = commands.sumConvert(topDirectory, batchSize, (batchData, batchNumber) => {
-								csv.writeXesToFile(`${baseFileName}_sum_output_${batchNumber % batchSize === 0 ? batchNumber : batchNumber - batchSize}.csv`, batchData);
-								console.log(`Converted ${batchNumber % batchSize === 0 ? batchSize : batchNumber % batchSize} xes files to sum cvs in ${(Date.now() - startBatchConvert) / 1000} seconds...`);
-								startBatchConvert = Date.now();
-							});
-
-							console.log(`Finished converting ${totalPositions} xes to sum csv in ${(Date.now() - startTime) / 1000} (${baseFileName}_sum_output_BATCH.csv)`);
-						}
-						console.log(`All files processed in ${(Date.now() - initialStartTime) / 1000}.`);
-					}
-					*/
 		}
 	} catch(err) {
 		console.error(err);
