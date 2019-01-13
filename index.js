@@ -216,10 +216,21 @@ else {
 								items.push(qlwData);
 
 								totalLength += batchLength;
-								if (options.qlw)
+								if (options.qlw) {
 									csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
-								if (options.xes)
-                                    csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+									console.log(`${baseFileName}_qlw_${totalLength}.csv`);
+								}
+
+								if (options.xes) {
+									csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+									console.log(`${baseFileName}_xes_${totalLength}.csv`);
+								}
+
+								if (options.sum) {
+									csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
+									console.log(`${baseFileName}_sum_${totalLength}.csv`);
+								}
+
 
 								batchLength = 0;
 								items = [];
@@ -231,11 +242,11 @@ else {
                             };
 
 							if (options.qlw)
-                                pos['qlwData'] = position.getQlwData();
+                                pos.qlwData = position.getQlwData();
                             if (options.xes )
-	                            pos['xesData'] = position.getXesData();
+	                            pos.xesData = position.getXesData();
                             if (options.sum)
-                            	pos['sumData'] = position.getSumData(pos['xesData']);
+                            	pos.sumData = position.getSumData(pos.xesData);
 
 							qlwData.positions.push(pos);
 							batchLength++;
@@ -258,10 +269,20 @@ else {
 
 				if (batchLength > 0) {
 					totalLength += batchLength;
-                    if (options.qlw)
-                        csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
-                    if (options.xes)
-                        csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+					if (options.qlw) {
+						csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
+						console.log(`${baseFileName}_qlw_${totalLength}.csv`);
+					}
+
+					if (options.xes) {
+						csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+						console.log(`${baseFileName}_xes_${totalLength}.csv`);
+					}
+
+					if (options.sum) {
+						csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
+						console.log(`${baseFileName}_sum_${totalLength}.csv`);
+					}
 
 					items = [];
 				}

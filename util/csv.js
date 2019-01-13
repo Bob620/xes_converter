@@ -1,6 +1,5 @@
 const fs = require('fs');
 
-const packageJson = require('../package');
 const constants = require('./constants');
 const metadata = require('./metadata');
 
@@ -11,7 +10,7 @@ module.exports = {
         for (let i = 0; i < constants.metadata.length; i++)
             lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
 
-        lines.push(['Probe Data and Noise']);
+        lines.push(['Probe Data']);
 
         const metaLines = lines.length;
 
@@ -57,6 +56,35 @@ module.exports = {
                         lines[(i * binXLength) + k + metaLines].push(xesData.data[i][k]);
                         lines[(binsY * binXLength) + (i * binXLength) + k + metaLines].push(xesData.noise[i][k]);
                     }
+                }
+            }
+
+        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));
+    },
+    writeSumToFile: (fileUri, items) => {
+        let lines = [];
+
+        for (let i = 0; i < constants.metadata.length; i++)
+            lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
+
+        lines.push(['Probe Data and Noise']);
+
+        const metaLines = lines.length;
+
+        for (let i = 0; i < items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x') * 2; i++)
+            lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
+
+        for (const {mapCond, mapRawCond, positions} of items)
+            for (const {dataCond, sumData} of positions) {
+                const meta = metadata(mapCond, mapRawCond, dataCond);
+                for (let i = 0; i < metaLines; i++)
+                    lines[i].push(meta[i]);
+
+                const binXLength = sumData.data.length;
+
+                for (let k = 0; k < binXLength; k++) { // Position iteration
+                    lines[k + metaLines].push(sumData.data[k]);
+                    lines[binXLength + k + metaLines].push(sumData.noise[k]);
                 }
             }
 
