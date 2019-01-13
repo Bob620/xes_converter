@@ -22,7 +22,7 @@ const conversions = {
 			for (let k = 0; k < binsY; k++) {
 				if (!output.data[i])
 					output.data[i] = 0;
-				if (output.noise[i])
+				if (!output.noise[i])
 					output.noise[i] = 0;
 				output.data[i] += xes.data[k][i];
 				output.noise[i] += xes.noise[k][i];
@@ -42,7 +42,6 @@ const conversions = {
 			data: [],
 			noise: []
 		};
-
 
 		// Grab the entire file as a buffer
 		const xesBytes = fs.readFileSync(fileUri, {encoding: null}).buffer;
