@@ -21,15 +21,17 @@ class Directory {
 			withFileTypes: true
 		});
 
+		// Iterate through each item inside the directory
 		for (const file of files) {
-			if (file.name) {
+			if (file.name) { // Is node > 11
 				if (file.isDirectory()) {
 					const dir = new Directory(`${this.data.uri}/${file.name}`, {name: file.name});
 					this.data.directories.set(file.name, dir);
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (file.isFile())
 					this.data.files.set(file.name, file);
-			} else {
+			} else { // Is node < 11
+				// Get stats for the item
 				let stats = fs.statSync(`${this.data.uri}/${file}`);
 				stats.name = file;
 

@@ -48,10 +48,7 @@ module.exports = class {
 	}
 
 	getSumData(xesObject) {
-		if (xesObject)
-			return conversions.xesObjectToSum(xesObject);
-		else
-			return conversions.xesFileToSum(`${this.data.directory.getUri()}/${this.data.xesFile.name}`);
+			return conversions.xesObjectToSum(xesObject ? xesObject : this.getXesData());
 	}
 
 	setXes(xesFile) {

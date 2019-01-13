@@ -254,17 +254,6 @@ else {
 
 						items.push(qlwData);
 					}
-
-					if (options.xes) {
-
-						if (options.sum) {
-
-						}
-					}
-
-					if (options.sum && !options.xes) {
-
-					}
 				}
 
 				if (batchLength > 0) {

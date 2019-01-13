@@ -5,9 +5,6 @@ const BitView = require('bit-buffer').BitView;
 
 
 const conversions = {
-	xesFileToSum: (fileUri) => {
-		return conversions.xesObjectToSum(conversions.xesFileToObject(fileUri));
-	},
 	xesObjectToSum: (xes) => {
 		let output = {
 			data: [],
@@ -21,9 +18,11 @@ const conversions = {
 		for (let i = 0; i < binXLength; i++) {
 			for (let k = 0; k < binsY; k++) {
 				if (!output.data[i])
-					output.data[i] = 0;
+					output.data[i] = 0; // set the initial value to 0 (otherwise NaN)
 				if (!output.noise[i])
-					output.noise[i] = 0;
+					output.noise[i] = 0; // set the initial value to 0 (otherwise NaN)
+
+				// Sum data
 				output.data[i] += xes.data[k][i];
 				output.noise[i] += xes.noise[k][i];
 			}

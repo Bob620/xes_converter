@@ -165,20 +165,7 @@ function xesPositionFind(directory, strict) {
 
 	return false;
 }
-/*
-function mapTopFilter(directory, strict=true) {
-	const subDirs = directory.getDirectories();
 
-	if (subDirs.size > 0) {
-		for (const [, dir] of subDirs) {
-			mapPositionFind(dir)
-
-		}
-	}
-
-	return false;
-}
-*/
 function mapPositionFilter(directory, strict) {
 	const files = directory.getFiles();
 
