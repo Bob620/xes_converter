@@ -46,7 +46,7 @@ module.exports = (mapCond, mapRawCond, dataCond) => {
 					lines.push(data ? data : '');
 					break;
 				default:
-					data = extra[meta[1]];
+					data = extra[meta[0]];
 					lines.push(data ? data : '');
 					break;
 			}
