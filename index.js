@@ -10,6 +10,9 @@ const Logger = require('./util/logger');
 Logger.setLog(constants.logger.names.defaultLog, {stdout: true});
 const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
+Logger.setLog(constants.logger.names.debugLog, {stdout: true, prefix: 'DEBUG: '});
+const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
+
 // given a top-file, locate valid internal structures and grab the data from them
 
 // This seems to be how things work:
@@ -180,20 +183,33 @@ if (options.help)
 	help();
 else {
 	if (!options.topDirectoryUri)
-		error('Please enter a uri of a directory to process, use with no options or -h for help');
+		log('Please enter a uri of a directory to process, use with no options or -h for help');
 	else {
 		try {
 			log('Preparing...');
 			const initialStartTime = Date.now();
+
+			if (options.debug)
+				debugLog(`Iterating through ${options.topDirectoryUri}`);
+
 			const topDirectory = new Directory(options.topDirectoryUri);
 			const classify = new Classify(options);
+
+			if (options.debug)
+				debugLog(`Classifying directories`);
 
 			classify.exploreDirectory(topDirectory);
 
 			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
+			if (options.debug)
+				debugLog(`Base file name: ${baseFileName}`);
+
 			log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
 			log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
+
+			if (options.debug)
+				debugLog('Starting processing of directories and files');
 
 			if (options.xes || options.qlw || options.sum || options.qmap) {
 				const startTime = Date.now();
@@ -202,63 +218,106 @@ else {
 				const qlws = classify.getQlws();
 				const maps = classify.getMaps();
 
+				if (options.debug)
+					debugLog(`${qlws.size} qlws, ${maps.size} maps`);
+
 				let items = [];
 				let totalLength = 0;
 				let batchLength = 0;
 				let failed = 0;
 
+				if (options.debug)
+					debugLog('Iterating through qlws...');
+
 				for (const [uri, qlw] of qlws) {
+					if (options.debug)
+						debugLog(`Processing ${qlw.getDirectory().getUri()}...`);
+
 					if (options.qmap)
 						if (maps.has(uri)) {
+							if (options.debug)
+								debugLog(`Processing as qmap...`);
 
 						}
 
 					if (options.qlw || options.xes || options.sum) {
+						if (options.debug)
+							debugLog(`Processing as qlw, xes, and/or sum...`);
+
+						if (options.debug)
+							debugLog(`Reading in map and raw map condition...`);
+
 						let qlwData = {
 							mapCond: qlw.getMapCond(),
 							mapRawCond: qlw.getMapRawCond(),
 							positions: []
 						};
 
+						if (options.debug)
+							debugLog(`Getting positions..`);
+
 						const positions = qlw.getPositions();
+
+						if (options.debug)
+							debugLog(`Iterating through ${positions.size} positions`);
 
 						for (const [, position] of positions) {
 							if (batchLength >= options.batchSize) {
+								if (options.debug)
+									debugLog('Pushing part of data to output array');
+
 								items.push(qlwData);
 
 								totalLength += batchLength;
 								if (options.qlw) {
+									if (options.debug)
+										debugLog('Outputting a batch of qlw');
+
 									csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
 									log(`${baseFileName}_qlw_${totalLength}.csv`);
 								}
 
 								if (options.xes) {
+									if (options.debug)
+										debugLog('Outputting a batch of xes');
+
 									csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 									log(`${baseFileName}_xes_${totalLength}.csv`);
 								}
 
 								if (options.sum) {
+									if (options.debug)
+										debugLog('Outputting a batch of sum');
+
 									csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
 									log(`${baseFileName}_sum_${totalLength}.csv`);
 								}
-
 
 								batchLength = 0;
 								items = [];
 								qlwData.positions = [];
 							}
 
+							if (options.debug)
+								debugLog('Getting position data condition');
+
 							let pos = {
 								dataCond: position.getDataCond(),
 							};
 
 							try {
+								if (options.debug)
+									debugLog('Attempting to read in qlw, xes, and/or sum');
+
 								if (options.qlw)
 									pos.qlwData = position.getQlwData();
 								if (options.xes)
 									pos.xesData = position.getXesData(options);
 								if (options.sum)
 									pos.sumData = position.getSumData(pos.xesData);
+
+								if (options.debug)
+									debugLog(`Pushing position ${position.getDirectory().getUri()} to position array`);
 
 								qlwData.positions.push(pos);
 								batchLength++;
@@ -281,16 +340,25 @@ else {
 				if (batchLength > 0) {
 					totalLength += batchLength;
 					if (options.qlw) {
+						if (options.debug)
+							debugLog('Finalizing qlw output');
+
 						csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
 						log(`${baseFileName}_qlw_${totalLength}.csv`);
 					}
 
 					if (options.xes) {
+						if (options.debug)
+							debugLog('Finalizing xes output');
+
 						csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 						log(`${baseFileName}_xes_${totalLength}.csv`);
 					}
 
 					if (options.sum) {
+						if (options.debug)
+							debugLog('Finalizing sum output');
+
 						csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
 						log(`${baseFileName}_sum_${totalLength}.csv`);
 					}

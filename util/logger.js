@@ -15,7 +15,7 @@ class Logger {
 		let logger = this.data.logs.get(logName);
 		if (!logger) {
 			logger = {
-				options: constants.logger.defaults,
+				options: JSON.parse(JSON.stringify(constants.logger.defaults)),
 				log: []
 			};
 		}
