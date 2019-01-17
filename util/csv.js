@@ -3,6 +3,9 @@ const fs = require('fs');
 const constants = require('./constants');
 const metadata = require('./metadata');
 
+const Logger = require('./logger');
+const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
+
 module.exports = {
     writeQlwToFile: (fileUri, items) => {
         let lines = [];
@@ -62,7 +65,7 @@ module.exports = {
         });
 
         if (posByLength[0][0] !== posByLength[0][0])
-            console.info('\n\tDue to uneven binning sizes, position order in csv may be out of alphabetical order.\n');
+            log('\n\tDue to uneven binning sizes, position order in csv may be out of alphabetical order.\n');
 
         // y + 1 sets of data and another y + 1 sets of noise based on the ccd camera size
         for (let i = 0; i < (posByLength[0][0] * posByLength[0][1]) * 2; i++)

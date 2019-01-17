@@ -6,6 +6,10 @@ const Classify = require('./util/classification');
 
 const constants = require('./util/constants');
 
+const Logger = require('./util/logger');
+Logger.setLog(constants.logger.names.defaultLog, {stdout: true});
+const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
+
 // given a top-file, locate valid internal structures and grab the data from them
 
 // This seems to be how things work:
@@ -14,22 +18,22 @@ const constants = require('./util/constants');
 // .cnf - sem_data_version 1
 
 function help() {
-	console.log('Usage: xes_converter [options] [directory]\n');
-	console.log('Options:');
-	console.log('-v, --version                    \tDisplays the version information');
-	console.log('-x, --xes                        \tConverts the xes files into an output file located in the directory given');
-	console.log('-q, --qlw                        \tConverts the qlw files into an output file located in the directory given');
-	console.log('-s, --sum                        \tConverts the xes files into an sum file located in the directory given');
-	console.log('-m, --map                        \tConverts the map directories to csv');
-	console.log('-l, --line                       \tConverts the lin directories to csv');
-	console.log('-k, --qmap                       \tOutputs maps for each qlw directory');
-	console.log('-a, --all                        \tOutputs all data (-xqsmlk)');
-	console.log('-j, --loose                      \tTurns off strict checks on directories and file names');
-	console.log('-r, --recover                    \tAttempts to recover data from potentially corrupted xes files');
-	console.log('-d, --debug                      \tEnabled debugging text');
-	console.log('-h, --help                       \tProvides this text');
-	console.log('-o [uri], --output [uri]         \tOutput directory uri');
-	console.log(`-b [number], --batchsize [number]\tThe number of positions per output file, default: ${constants.batchSize}`);
+	log('Usage: xes_converter [options] [directory]\n');
+	log('Options:');
+	log('-v, --version                    \tDisplays the version information');
+	log('-x, --xes                        \tConverts the xes files into an output file located in the directory given');
+	log('-q, --qlw                        \tConverts the qlw files into an output file located in the directory given');
+	log('-s, --sum                        \tConverts the xes files into an sum file located in the directory given');
+	log('-m, --map                        \tConverts the map directories to csv');
+	log('-l, --line                       \tConverts the lin directories to csv');
+	log('-k, --qmap                       \tOutputs maps for each qlw directory');
+	log('-a, --all                        \tOutputs all data (-xqsmlk)');
+	log('-j, --loose                      \tTurns off strict checks on directories and file names');
+	log('-r, --recover                    \tAttempts to recover data from potentially corrupted xes files');
+	log('-d, --debug                      \tEnabled debugging text');
+	log('-h, --help                       \tProvides this text');
+	log('-o [uri], --output [uri]         \tOutput directory uri');
+	log(`-b [number], --batchsize [number]\tThe number of positions per output file, default: ${constants.batchSize}`);
 }
 
 let options = {
@@ -170,16 +174,16 @@ else
 	process.env.NODE_ENV = 'production';
 
 if (options.version)
-	console.log(require('./package').version);
+	log(require('./package').version);
 
 if (options.help)
 	help();
 else {
 	try {
 		if (!options.topDirectoryUri)
-			console.error('Please enter a uri of a directory to process, use with no options or -h for help');
+			error('Please enter a uri of a directory to process, use with no options or -h for help');
 		else {
-			console.log('Preparing...');
+			log('Preparing...');
 			const initialStartTime = Date.now();
 			const topDirectory = new Directory(options.topDirectoryUri);
 			const classify = new Classify(options);
@@ -188,12 +192,12 @@ else {
 
 			const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;
 
-			console.log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
-			console.log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
+			log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
+			log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
 
 			if (options.xes || options.qlw || options.sum || options.qmap) {
 				const startTime = Date.now();
-				console.log('Processing qlw directories...');
+				log('Processing qlw directories...');
 
 				const qlws = classify.getQlws();
 				const maps = classify.getMaps();
@@ -225,17 +229,17 @@ else {
 								totalLength += batchLength;
 								if (options.qlw) {
 									csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
-									console.log(`${baseFileName}_qlw_${totalLength}.csv`);
+									log(`${baseFileName}_qlw_${totalLength}.csv`);
 								}
 
 								if (options.xes) {
 									csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
-									console.log(`${baseFileName}_xes_${totalLength}.csv`);
+									log(`${baseFileName}_xes_${totalLength}.csv`);
 								}
 
 								if (options.sum) {
 									csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
-									console.log(`${baseFileName}_sum_${totalLength}.csv`);
+									log(`${baseFileName}_sum_${totalLength}.csv`);
 								}
 
 
@@ -260,8 +264,12 @@ else {
 								batchLength++;
 
 							} catch(err) {
-								console.log(err);
-								console.log(`Skipping ${position.getDirectory().getUri()}`);
+								if (err.message)
+									log(err.message);
+								else
+									console.error(err);
+
+								log(`Skipping ${position.getDirectory().getUri()}\n`);
 								failed++;
 							}
 						}
@@ -274,17 +282,17 @@ else {
 					totalLength += batchLength;
 					if (options.qlw) {
 						csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
-						console.log(`${baseFileName}_qlw_${totalLength}.csv`);
+						log(`${baseFileName}_qlw_${totalLength}.csv`);
 					}
 
 					if (options.xes) {
 						csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
-						console.log(`${baseFileName}_xes_${totalLength}.csv`);
+						log(`${baseFileName}_xes_${totalLength}.csv`);
 					}
 
 					if (options.sum) {
 						csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
-						console.log(`${baseFileName}_sum_${totalLength}.csv`);
+						log(`${baseFileName}_sum_${totalLength}.csv`);
 					}
 
 					items = [];
@@ -292,17 +300,56 @@ else {
 
 				const finishTime = (Date.now() - startTime)/1000;
 
-				console.log('\nQLW Output Log');
-				console.log(options.recover ? '[recovery] |  normal' : ' recovery  | [normal]');
-				console.log(options.loose   ? '   [loose] |  strict' : '    loose  | [strict]');
-				console.log(options.debug   ? '   [debug] |  normal' : '    debug  | [normal]');
-				console.log(`Finished processing qlw directories in ${finishTime} seconds`);
-				console.log(`Processed ${totalLength} ${totalLength === 1 ? 'position' : 'positions'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
-				console.log(`${failed} positions failed to be processed`);
+				log('\nQLW Output Log');
+				log(options.recover ? '[recovery] |  normal' : ' recovery  | [normal]');
+				log(options.loose   ? '   [loose] |  strict' : '    loose  | [strict]');
+				log(options.debug   ? '   [debug] |  normal' : '    debug  | [normal]');
+				log(`Finished processing qlw directories in ${finishTime} seconds`);
+				log(`Processed ${totalLength} ${totalLength === 1 ? 'position' : 'positions'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
+				log(`${failed} positions failed to be processed`);
 			}
 		}
+		const readline = require('readline');
+
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout
+		});
+
+		rl.question('Do you want to save this log [y/n]: ', answer => {
+			if (answer[0] === 'y') {
+				const fs = require('fs');
+
+				// Screw Windows new lines
+				fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, Logger.getLog(constants.logger.names.defaultLog).log.map(line => line.replace(/\n/gi, '\r\n')).join('\r\n'));
+				log('Log written to file');
+			}
+
+			rl.close();
+			process.exit(0);
+		});
 	} catch(err) {
 		console.error(err);
+
+		const readline = require('readline');
+
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout
+		});
+
+		rl.question('Do you want to save this log [y/n]: ', answer => {
+			if (answer[0] === 'y') {
+				const fs = require('fs');
+
+				// Screw Windows new lines
+				fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, Logger.getLog(constants.logger.names.defaultLog).log.map(line => line.replace(/\n/gi, '\r\n')).join('\r\n'));
+				log('Log written to file');
+			}
+
+			rl.close();
+			process.exit(0);
+		});
 	}
 }
 

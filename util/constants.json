@@ -95,5 +95,14 @@
     ["mapRawCond", "ccd_parameter", "ccd_size_x", "binXLength"],
     ["binsY", "binsY"],
     ["mapRawCond", "ccd_parameter", "ccd_size_y", "binYLength"]
-  ]
+  ],
+  "logger": {
+    "defaults": {
+      "stdout": false,
+      "prefix": ""
+    },
+    "names": {
+      "defaultLog": "general"
+    }
+  }
 }

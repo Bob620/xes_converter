@@ -3,6 +3,8 @@ const fs = require('fs');
 const constants = require('./constants');
 const BitView = require('bit-buffer').BitView;
 
+const Logger = require('./logger');
+const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
 const conversions = {
 	xesObjectToSum: (xes) => {
@@ -59,9 +61,9 @@ const conversions = {
 		// Compare the file size to the expected length and handle accordingly
 		if (binsY !== totalExpectedBins / 2)
 			if (options.recover) {
-				console.info(`Attempting to recover data from ${fileUri}`);
+				log(`Attempting to recover data from ${fileUri}`);
 				if (totalExpectedBins >= binsY) {
-					console.info('Skipping background data to attempt recovery');
+					log('Skipping background data to attempt recovery');
 
 					readBackground = false;
 				} else
@@ -71,7 +73,7 @@ const conversions = {
 					};
 			} else
 				throw {
-					message: 'xes file incorrectly identified, read, or created? (Invalid estimated file length)\n Use -r to attempt xes recovery',
+					message: 'xes file incorrectly identified, read, or created? (Invalid estimated file length)\nUse -r to attempt xes recovery',
 					code: 4
 				};
 
@@ -128,7 +130,7 @@ const conversions = {
 				positionData.data.push(probeData);
 				positionData.background.push(probeBackground);
 			}
-			console.info('Recovery of data successful.\n');
+			log('Recovery of data successful.\n');
 		}
 
 		return positionData;
