@@ -50,11 +50,15 @@ const conversions = {
 		const xesHeader = new BitView(xesBytes, constants.xes.headerByteOffset, constants.xes.headerByteEnd);
 
         // Convert the header into usable parameters
-		const binXLength = xesHeader.getUint32(constants.xes.dataCheckOffset) - 1;
-        const binsY = Math.floor((xesBytes.byteLength / 4) / binXLength / 2);
+		const binXLength = xesHeader.getUint32(constants.xes.headerBinLengthOffset) - 1;
+		const binsY = xesHeader.getUint32(constants.xes.headerBinsOffset);
 
-//        console.log(xesBytes.byteLength);
-//        console.log(xesBytes.byteLength / 4 / binXLength / 2);
+		// Compare the file size to the expected length
+		if (binsY !== Math.floor((xesBytes.byteLength / 4) / binXLength / 2))
+			throw {
+				message: 'xes file incorrectly identified, read, or created? (Invalid estimated file length)',
+				code: 4
+			};
 
         // We get one more bin than we understand, skips it
         const BinByteLength = 4 * (binXLength + 1);
@@ -69,7 +73,7 @@ const conversions = {
 		// Make sure we have the right position for noise by checking against metadata (noise is always the same length)
 		if (xesNoise.getUint32(constants.xes.noiseCheckOffset) - 1 !== binXLength)
 			throw {
-				message: 'xes file incorrectly identified, read, or created?',
+				message: 'xes file incorrectly identified, read, or created? (Invalid bin length)',
 				code: 2
 			};
 
