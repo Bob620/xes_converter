@@ -179,10 +179,10 @@ if (options.version)
 if (options.help)
 	help();
 else {
-	try {
-		if (!options.topDirectoryUri)
-			error('Please enter a uri of a directory to process, use with no options or -h for help');
-		else {
+	if (!options.topDirectoryUri)
+		error('Please enter a uri of a directory to process, use with no options or -h for help');
+	else {
+		try {
 			log('Preparing...');
 			const initialStartTime = Date.now();
 			const topDirectory = new Directory(options.topDirectoryUri);
@@ -248,9 +248,9 @@ else {
 								qlwData.positions = [];
 							}
 
-                            let pos = {
-                                dataCond: position.getDataCond(),
-                            };
+							let pos = {
+								dataCond: position.getDataCond(),
+							};
 
 							try {
 								if (options.qlw)
@@ -263,7 +263,7 @@ else {
 								qlwData.positions.push(pos);
 								batchLength++;
 
-							} catch(err) {
+							} catch (err) {
 								if (err.message)
 									log(err.message);
 								else
@@ -298,38 +298,20 @@ else {
 					items = [];
 				}
 
-				const finishTime = (Date.now() - startTime)/1000;
+				const finishTime = (Date.now() - startTime) / 1000;
 
 				log('\nQLW Output Log');
 				log(options.recover ? '[recovery] |  normal' : ' recovery  | [normal]');
-				log(options.loose   ? '   [loose] |  strict' : '    loose  | [strict]');
-				log(options.debug   ? '   [debug] |  normal' : '    debug  | [normal]');
+				log(options.loose ? '   [loose] |  strict' : '    loose  | [strict]');
+				log(options.debug ? '   [debug] |  normal' : '    debug  | [normal]');
 				log(`Finished processing qlw directories in ${finishTime} seconds`);
 				log(`Processed ${totalLength} ${totalLength === 1 ? 'position' : 'positions'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
 				log(`${failed} positions failed to be processed`);
 			}
+
+		} catch (err) {
+			console.log(err);
 		}
-		const readline = require('readline');
-
-		const rl = readline.createInterface({
-			input: process.stdin,
-			output: process.stdout
-		});
-
-		rl.question('Do you want to save this log [y/n]: ', answer => {
-			if (answer[0] === 'y') {
-				const fs = require('fs');
-
-				// Screw Windows new lines
-				fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, Logger.getLog(constants.logger.names.defaultLog).log.map(line => line.replace(/\n/gi, '\r\n')).join('\r\n'));
-				log('Log written to file');
-			}
-
-			rl.close();
-			process.exit(0);
-		});
-	} catch(err) {
-		console.error(err);
 
 		const readline = require('readline');
 
@@ -352,7 +334,5 @@ else {
 		});
 	}
 }
-
-
 
 
