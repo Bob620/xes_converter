@@ -25,7 +25,7 @@ function help() {
 	console.log('-a, --all                        \tOutputs all data (-xqsmlk)');
 	console.log('-k, --qmap                       \tOutputs maps for each qlw directory');
 	console.log('-j, --loose                      \tTurns off strict checks on directories and file names');
-	console.log('-f, --force                      \tForces data output even with missing metadata');
+	console.log('-r, --recover                   \tAttempts to recover data from potentially corrupted xes files');
 	console.log('-e, --explore                    \tExplores and assumes output data wanted');
 	console.log('-d, --debug                      \tEnabled debugging text');
 	console.log('-h, --help                       \tProvides this text');
@@ -43,6 +43,7 @@ let options = {
 	map: false,
 	line: false,
 	qmap: false,
+	recover: false,
 	help: false,
 	version: false,
 	loose: false,
@@ -92,6 +93,9 @@ for (let i = 2; i < process.argv.length; i++) {
 				break;
 			case '--loose':
 				options.loose = true;
+				break;
+			case '--recover':
+				options.recover = true;
 				break;
 			case '--debug':
 				options.debug = true;
@@ -144,6 +148,10 @@ for (let i = 2; i < process.argv.length; i++) {
 							break;
 						case 'd':
 							options.debug = true;
+							break;
+						case 'r':
+							options.recover = true;
+							break;
 					}
 				break;
 		}
@@ -244,7 +252,7 @@ else {
 								if (options.qlw)
 									pos.qlwData = position.getQlwData();
 								if (options.xes)
-									pos.xesData = position.getXesData();
+									pos.xesData = position.getXesData(options);
 								if (options.sum)
 									pos.sumData = position.getSumData(pos.xesData);
 

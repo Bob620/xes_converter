@@ -31,9 +31,9 @@ module.exports = class {
 		return false;
 	}
 
-	getXesData() {
+	getXesData(options) {
 		if (this.data.xesFile || this.data.xesFile === 'undefined')
-			return conversions.xesFileToObject(`${this.data.directory.getUri()}/${this.data.xesFile.name}`);
+			return conversions.xesFileToObject(`${this.data.directory.getUri()}/${this.data.xesFile.name}`, options);
 
 		let output = {
 			data: [],

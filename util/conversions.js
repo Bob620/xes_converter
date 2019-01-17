@@ -30,7 +30,7 @@ const conversions = {
 
 		return output;
 	},
-	xesFileToObject: (fileUri) => {
+	xesFileToObject: (fileUri, options={}) => {
 		if (!fileUri)
 			throw {
 				message: 'No file uri given to read xes file',
@@ -52,46 +52,71 @@ const conversions = {
         // Convert the header into usable parameters
 		const binXLength = xesHeader.getUint32(constants.xes.headerBinLengthOffset) - 1;
 		const binsY = xesHeader.getUint32(constants.xes.headerBinsOffset);
+		const totalExpectedBins = Math.floor((xesBytes.byteLength / 4) / binXLength);
 
-		// Compare the file size to the expected length
-		if (binsY !== Math.floor((xesBytes.byteLength / 4) / binXLength / 2))
-			throw {
-				message: 'xes file incorrectly identified, read, or created? (Invalid estimated file length)',
-				code: 4
-			};
+		let readBackground = true;
 
-        // We get one more bin than we understand, skips it
+		// Compare the file size to the expected length and handle accordingly
+		if (binsY !== totalExpectedBins / 2)
+			if (options.recover) {
+				if (totalExpectedBins >= binsY) {
+					console.info(`Attempting to recover data from ${fileUri}`);
+					console.info('Skipping background data to attempt recovery');
+
+					readBackground = false;
+				}
+			} else
+				throw {
+					message: 'xes file incorrectly identified, read, or created? (Invalid estimated file length)\n Use -r to attempt xes recovery',
+					code: 4
+				};
+
+        // The ccd outputs 2049 points when it can only read 2048, skip the last point
         const BinByteLength = 4 * (binXLength + 1);
         const TotalBinByteLength = BinByteLength * binsY;
 
         // Doesn't start at 0, some basic metadata and blank space covered by the header
 		const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
 
-		// 2 byte offset on each end and some metadata at the start
-		const xesNoise = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset);
+		if (readBackground) {
+			// 2 byte offset on each end and some metadata at the start
+			const xesBackground = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset);
 
-		// Make sure we have the right position for noise by checking against metadata (noise is always the same length)
-		if (xesNoise.getUint32(constants.xes.noiseCheckOffset) - 1 !== binXLength)
-			throw {
-				message: 'xes file incorrectly identified, read, or created? (Invalid bin length)',
-				code: 2
-			};
+			// Make sure we have the right position for noise by checking against metadata (noise is always the same length)
+			if (xesBackground.getUint32(constants.xes.noiseCheckOffset) - 1 !== binXLength)
+				throw {
+					message: 'xes file incorrectly identified, read, or created? (Invalid bin length)',
+					code: 2
+				};
+
+			// Grab all the background data
+			for (let i = 0; i < binsY; i++) {
+				let probeBackground = [];
+				for (let k = 0; k < binXLength; k++)
+					probeBackground.push(xesBackground.getUint32((BinByteLength * 8 * i) + (32 * k) + constants.xes.noiseDataOffset)); // Measured in bits
+				positionData.background.push(probeBackground);
+			}
+		}
 
 		// Grab all the position data
-		for (let i = 0; i < binsY; i++) {
-			let xesProbeData = [];
-			for (let k = 0; k < binXLength; k++)
-				xesProbeData.push(xesData.getUint32((BinByteLength * 8 * i) + (32 * k))); // Measured in bits
-			positionData.data.push(xesProbeData);
-		}
-
-		// Grab all the positional noise
-		for (let i = 0; i < binsY; i++) {
-			let xesProbeNoise = [];
-			for (let k = 0; k < binXLength; k++)
-				xesProbeNoise.push(xesNoise.getUint32((BinByteLength * 8 * i) + (32 * k) + constants.xes.noiseDataOffset)); // Measured in bits
-			positionData.background.push(xesProbeNoise);
-		}
+		if (readBackground)
+			for (let i = 0; i < binsY; i++) {
+				let probeData = [];
+				for (let k = 0; k < binXLength; k++)
+					probeData.push(xesData.getUint32((BinByteLength * 8 * i) + (32 * k))); // Measured in bits
+				positionData.data.push(probeData);
+			}
+		else // Fill background with 0 in case of not being able to read it
+			for (let i = 0; i < binsY; i++) {
+				let probeData = [];
+				let probeBackground = [];
+				for (let k = 0; k < binXLength; k++) {
+					probeData.push(xesData.getUint32((BinByteLength * 8 * i) + (32 * k))); // Measured in bits
+					probeBackground.push(0);
+				}
+				positionData.data.push(probeData);
+				positionData.background.push(probeBackground);
+			}
 
 		return positionData;
 	},
