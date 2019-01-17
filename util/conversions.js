@@ -59,12 +59,16 @@ const conversions = {
 		// Compare the file size to the expected length and handle accordingly
 		if (binsY !== totalExpectedBins / 2)
 			if (options.recover) {
+				console.info(`Attempting to recover data from ${fileUri}`);
 				if (totalExpectedBins >= binsY) {
-					console.info(`Attempting to recover data from ${fileUri}`);
 					console.info('Skipping background data to attempt recovery');
 
 					readBackground = false;
-				}
+				} else
+					throw {
+						message: 'Recovery failed, file not long enough to recover data.\n',
+						code: 5
+					};
 			} else
 				throw {
 					message: 'xes file incorrectly identified, read, or created? (Invalid estimated file length)\n Use -r to attempt xes recovery',
@@ -90,11 +94,18 @@ const conversions = {
 				};
 
 			// Grab all the background data
-			for (let i = 0; i < binsY; i++) {
-				let probeBackground = [];
-				for (let k = 0; k < binXLength; k++)
-					probeBackground.push(xesBackground.getUint32((BinByteLength * 8 * i) + (32 * k) + constants.xes.noiseDataOffset)); // Measured in bits
-				positionData.background.push(probeBackground);
+			try {
+				for (let i = 0; i < binsY; i++) {
+					let probeBackground = [];
+					for (let k = 0; k < binXLength; k++)
+						probeBackground.push(xesBackground.getUint32((BinByteLength * 8 * i) + (32 * k) + constants.xes.noiseDataOffset)); // Measured in bits
+					positionData.background.push(probeBackground);
+				}
+			} catch(err) {
+				throw {
+					message: 'xes file incorrectly identified, read, or created? (Unknown error)',
+					code: 6
+				};
 			}
 		}
 
@@ -106,7 +117,7 @@ const conversions = {
 					probeData.push(xesData.getUint32((BinByteLength * 8 * i) + (32 * k))); // Measured in bits
 				positionData.data.push(probeData);
 			}
-		else // Fill background with 0 in case of not being able to read it
+		else { // Fill background with 0 in case of not being able to read it
 			for (let i = 0; i < binsY; i++) {
 				let probeData = [];
 				let probeBackground = [];
@@ -117,6 +128,8 @@ const conversions = {
 				positionData.data.push(probeData);
 				positionData.background.push(probeBackground);
 			}
+			console.info('Recovery of data successful.\n');
+		}
 
 		return positionData;
 	},

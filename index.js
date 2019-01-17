@@ -22,11 +22,10 @@ function help() {
 	console.log('-s, --sum                        \tConverts the xes files into an sum file located in the directory given');
 	console.log('-m, --map                        \tConverts the map directories to csv');
 	console.log('-l, --line                       \tConverts the lin directories to csv');
-	console.log('-a, --all                        \tOutputs all data (-xqsmlk)');
 	console.log('-k, --qmap                       \tOutputs maps for each qlw directory');
+	console.log('-a, --all                        \tOutputs all data (-xqsmlk)');
 	console.log('-j, --loose                      \tTurns off strict checks on directories and file names');
-	console.log('-r, --recover                   \tAttempts to recover data from potentially corrupted xes files');
-	console.log('-e, --explore                    \tExplores and assumes output data wanted');
+	console.log('-r, --recover                    \tAttempts to recover data from potentially corrupted xes files');
 	console.log('-d, --debug                      \tEnabled debugging text');
 	console.log('-h, --help                       \tProvides this text');
 	console.log('-o [uri], --output [uri]         \tOutput directory uri');
@@ -202,6 +201,7 @@ else {
 				let items = [];
 				let totalLength = 0;
 				let batchLength = 0;
+				let failed = 0;
 
 				for (const [uri, qlw] of qlws) {
 					if (options.qmap)
@@ -262,6 +262,7 @@ else {
 							} catch(err) {
 								console.log(err);
 								console.log(`Skipping ${position.getDirectory().getUri()}`);
+								failed++;
 							}
 						}
 
@@ -289,8 +290,15 @@ else {
 					items = [];
 				}
 
-				console.log(`Finished processing qlw directories in ${(Date.now() - startTime)/1000} seconds`);
+				const finishTime = (Date.now() - startTime)/1000;
+
+				console.log('\nQLW Output Log');
+				console.log(options.recover ? '[recovery] |  normal' : ' recovery  | [normal]');
+				console.log(options.loose   ? '   [loose] |  strict' : '    loose  | [strict]');
+				console.log(options.debug   ? '   [debug] |  normal' : '    debug  | [normal]');
+				console.log(`Finished processing qlw directories in ${finishTime} seconds`);
 				console.log(`Processed ${totalLength} ${totalLength === 1 ? 'position' : 'positions'} in ${Math.ceil(totalLength / constants.batchSize)} ${Math.ceil(totalLength / constants.batchSize) === 1 ? 'batch' : 'batches'}`);
+				console.log(`${failed} positions failed to be processed`);
 			}
 		}
 	} catch(err) {
