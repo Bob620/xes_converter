@@ -50,44 +50,38 @@ module.exports = {
 
         // Each item can have wildly different data and background lengths, but both background and data should be the same length
         // Because of this we need a way to quantify the longest set and build around that
-        let longestDataLength = 0;
+        // Only the Y axis should be binned for the moment, if X were binned it would be a strange occurrence
+        let posByLength = [];
 
-        for (const item of items) {
-            const ccdParam = item.mapRawCond.get('ccd_parameter');
+        for (const item of items)
+            for (const position of item.positions)
+                posByLength.push([position.xesData.data.length, position.xesData.data[0].length, position, item]);
 
-            item.xBins = ccdParam.get('ccd_size_x') / ccdParam.get('binning_param_x');
-            item.yBins = ccdParam.get('ccd_size_y') / ccdParam.get('binning_param_y');
+        posByLength.sort((a, b) => {
+            return b[0] - a[0];
+        });
 
-            const totalLength = item.xBins * item.yBins;
+        if (posByLength[0][0] !== posByLength[0][0])
+            console.info('\n\tDue to uneven binning sizes, position order in csv may be out of alphabetical order.\n');
 
-            if (totalLength > longestDataLength)
-                longestDataLength = totalLength;
-        }
-
-        // y + 1 sets of data and another y + 1 sets of noise
-        for (let i = 0; i < (longestDataLength) * 2; i++)
+        // y + 1 sets of data and another y + 1 sets of noise based on the ccd camera size
+        for (let i = 0; i < (posByLength[0][0] * posByLength[0][1]) * 2; i++)
             lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 
-        // Iterate over the items
-        for (const {mapCond, mapRawCond, positions, yBins, xBins} of items)
-            for (const {dataCond, xesData} of positions) {
+        for (const [yBins, xBins, {dataCond, xesData}, {mapCond, mapRawCond}] of posByLength) {
 
-                // Grab all the needed metadata
-                const meta = metadata(mapCond, mapRawCond, dataCond);
-                for (let i = 0; i < metaLines; i++)
-                    lines[i].push(meta[i]);
+            // Grab all the needed metadata
+            const meta = metadata(mapCond, mapRawCond, dataCond);
+            for (let i = 0; i < metaLines; i++)
+                lines[i].push(meta[i]);
 
-                // Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
-                for (let i = 0; i < yBins; i++) // Bin iteration
-                    for (let k = 0; k < xBins; k++) { // Position iteration
-                        lines[(i * xBins) + k + metaLines].push(xesData.data[i][k]);
-                        lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.background[i][k]);
-                    }
-
-                for (let i = 0; i < (longestDataLength * 2) - (yBins * xBins) * 2; i++)
-                    lines[(yBins * xBins) * 2 + i].push('');
-
-            }
+            // Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
+            for (let i = 0; i < yBins; i++) // Bin iteration
+                for (let k = 0; k < xBins; k++) { // Position iteration
+                    lines[(i * xBins) + k + metaLines].push(xesData.data[i][k]);
+                    lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.background[i][k]);
+                }
+        }
 
         // Write out everything all at once
         fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));

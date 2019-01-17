@@ -216,17 +216,17 @@ else {
 
 								totalLength += batchLength;
 								if (options.qlw) {
-									//csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
+									csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
 									console.log(`${baseFileName}_qlw_${totalLength}.csv`);
 								}
 
 								if (options.xes) {
-									//csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+									csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 									console.log(`${baseFileName}_xes_${totalLength}.csv`);
 								}
 
 								if (options.sum) {
-									//csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
+									csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
 									console.log(`${baseFileName}_sum_${totalLength}.csv`);
 								}
 

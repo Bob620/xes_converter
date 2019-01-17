@@ -53,8 +53,8 @@ const conversions = {
 		const binXLength = xesHeader.getUint32(constants.xes.dataCheckOffset) - 1;
         const binsY = Math.floor((xesBytes.byteLength / 4) / binXLength / 2);
 
-        console.log(xesBytes.byteLength);
-        console.log(xesBytes.byteLength / 4 / binXLength / 2);
+//        console.log(xesBytes.byteLength);
+//        console.log(xesBytes.byteLength / 4 / binXLength / 2);
 
         // We get one more bin than we understand, skips it
         const BinByteLength = 4 * (binXLength + 1);
