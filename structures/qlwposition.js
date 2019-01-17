@@ -37,12 +37,12 @@ module.exports = class {
 
 		let output = {
 			data: [],
-			noise: []
+			background: []
 		};
 
 		for (let i = 0; i < 2048; i++) {
 			output.data.push(0);
-			output.noise.push(0);
+			output.background.push(0);
 		}
 		return output;
 	}

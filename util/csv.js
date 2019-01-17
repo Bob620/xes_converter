@@ -44,16 +44,32 @@ module.exports = {
         for (let i = 0; i < constants.metadata.length; i++)
             lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
 
-        lines.push(['Probe Data and Noise']);
+        lines.push(['Probe Data and Background Data']);
 
         const metaLines = lines.length;
 
+        // Each item can have wildly different data and background lengths, but both background and data should be the same length
+        // Because of this we need a way to quantify the longest set and build around that
+        let longestDataLength = 0;
+
+        for (const item of items) {
+            const ccdParam = item.mapRawCond.get('ccd_parameter');
+
+            item.xBins = ccdParam.get('ccd_size_x') / ccdParam.get('binning_param_x');
+            item.yBins = ccdParam.get('ccd_size_y') / ccdParam.get('binning_param_y');
+
+            const totalLength = item.xBins * item.yBins;
+
+            if (totalLength > longestDataLength)
+                longestDataLength = totalLength;
+        }
+
         // y + 1 sets of data and another y + 1 sets of noise
-        for (let i = 0; i < items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x') * 2 * (items[0].mapRawCond.get('ccd_parameter').get('ccd_size_y')/items[0].mapRawCond.get('ccd_parameter').get('binning_param_y') + 1); i++)
+        for (let i = 0; i < (longestDataLength) * 2; i++)
             lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 
         // Iterate over the items
-        for (const {mapCond, mapRawCond, positions} of items)
+        for (const {mapCond, mapRawCond, positions, yBins, xBins} of items)
             for (const {dataCond, xesData} of positions) {
 
                 // Grab all the needed metadata
@@ -61,16 +77,16 @@ module.exports = {
                 for (let i = 0; i < metaLines; i++)
                     lines[i].push(meta[i]);
 
-                const binsY = xesData.data.length;
-                const binXLength = xesData.data[0].length;
-
                 // Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
-                for (let i = 0; i < binsY; i++) { // Bin iteration
-                    for (let k = 0; k < binXLength; k++) { // Position iteration
-                        lines[(i * binXLength) + k + metaLines].push(xesData.data[i][k]);
-                        lines[(binsY * binXLength) + (i * binXLength) + k + metaLines].push(xesData.noise[i][k]);
+                for (let i = 0; i < yBins; i++) // Bin iteration
+                    for (let k = 0; k < xBins; k++) { // Position iteration
+                        lines[(i * xBins) + k + metaLines].push(xesData.data[i][k]);
+                        lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.background[i][k]);
                     }
-                }
+
+                for (let i = 0; i < (longestDataLength * 2) - (yBins * xBins) * 2; i++)
+                    lines[(yBins * xBins) * 2 + i].push('');
+
             }
 
         // Write out everything all at once
@@ -83,7 +99,7 @@ module.exports = {
         for (let i = 0; i < constants.metadata.length; i++)
             lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
 
-        lines.push(['Probe Data and Noise']);
+        lines.push(['Probe Data and Background Data']);
 
         const metaLines = lines.length;
 
@@ -105,7 +121,7 @@ module.exports = {
                 // Append the data to the array (easiest way to work with csv atm)
                 for (let k = 0; k < binXLength; k++) { // Position iteration
                     lines[k + metaLines].push(sumData.data[k]);
-                    lines[binXLength + k + metaLines].push(sumData.noise[k]);
+                    lines[binXLength + k + metaLines].push(sumData.background[k]);
                 }
             }
 

@@ -1,7 +1,6 @@
 #! /usr/bin/env node
 
 const Directory = require('./structures/directory');
-const conversions = require('./util/conversions');
 const csv = require('./util/csv');
 const Classify = require('./util/classification');
 
@@ -217,17 +216,17 @@ else {
 
 								totalLength += batchLength;
 								if (options.qlw) {
-									csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
+									//csv.writeQlwToFile(`${baseFileName}_qlw_${totalLength}.csv`, items);
 									console.log(`${baseFileName}_qlw_${totalLength}.csv`);
 								}
 
 								if (options.xes) {
-									csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
+									//csv.writeXesToFile(`${baseFileName}_xes_${totalLength}.csv`, items);
 									console.log(`${baseFileName}_xes_${totalLength}.csv`);
 								}
 
 								if (options.sum) {
-									csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
+									//csv.writeSumToFile(`${baseFileName}_sum_${totalLength}.csv`, items);
 									console.log(`${baseFileName}_sum_${totalLength}.csv`);
 								}
 
@@ -241,15 +240,21 @@ else {
                                 dataCond: position.getDataCond(),
                             };
 
-							if (options.qlw)
-                                pos.qlwData = position.getQlwData();
-                            if (options.xes )
-	                            pos.xesData = position.getXesData();
-                            if (options.sum)
-                            	pos.sumData = position.getSumData(pos.xesData);
+							try {
+								if (options.qlw)
+									pos.qlwData = position.getQlwData();
+								if (options.xes)
+									pos.xesData = position.getXesData();
+								if (options.sum)
+									pos.sumData = position.getSumData(pos.xesData);
 
-							qlwData.positions.push(pos);
-							batchLength++;
+								qlwData.positions.push(pos);
+								batchLength++;
+
+							} catch(err) {
+								console.log(err);
+								console.log(`Skipping ${position.getDirectory().getUri()}`);
+							}
 						}
 
 						items.push(qlwData);

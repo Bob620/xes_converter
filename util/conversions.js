@@ -8,7 +8,7 @@ const conversions = {
 	xesObjectToSum: (xes) => {
 		let output = {
 			data: [],
-			noise: []
+			background: []
 		};
 
 		const binsY = xes.data.length;
@@ -19,12 +19,12 @@ const conversions = {
 			for (let k = 0; k < binsY; k++) {
 				if (!output.data[i])
 					output.data[i] = 0; // set the initial value to 0 (otherwise NaN)
-				if (!output.noise[i])
-					output.noise[i] = 0; // set the initial value to 0 (otherwise NaN)
+				if (!output.background[i])
+					output.background[i] = 0; // set the initial value to 0 (otherwise NaN)
 
 				// Sum data
 				output.data[i] += xes.data[k][i];
-				output.noise[i] += xes.noise[k][i];
+				output.background[i] += xes.background[k][i];
 			}
 		}
 
@@ -39,7 +39,7 @@ const conversions = {
 
 		let positionData = {
 			data: [],
-			noise: []
+			background: []
 		};
 
 		// Grab the entire file as a buffer
@@ -52,6 +52,9 @@ const conversions = {
         // Convert the header into usable parameters
 		const binXLength = xesHeader.getUint32(constants.xes.dataCheckOffset) - 1;
         const binsY = Math.floor((xesBytes.byteLength / 4) / binXLength / 2);
+
+        console.log(xesBytes.byteLength);
+        console.log(xesBytes.byteLength / 4 / binXLength / 2);
 
         // We get one more bin than we understand, skips it
         const BinByteLength = 4 * (binXLength + 1);
@@ -66,7 +69,7 @@ const conversions = {
 		// Make sure we have the right position for noise by checking against metadata (noise is always the same length)
 		if (xesNoise.getUint32(constants.xes.noiseCheckOffset) - 1 !== binXLength)
 			throw {
-				message: 'xes file incorrectly identified or read?',
+				message: 'xes file incorrectly identified, read, or created?',
 				code: 2
 			};
 
@@ -83,7 +86,7 @@ const conversions = {
 			let xesProbeNoise = [];
 			for (let k = 0; k < binXLength; k++)
 				xesProbeNoise.push(xesNoise.getUint32((BinByteLength * 8 * i) + (32 * k) + constants.xes.noiseDataOffset)); // Measured in bits
-			positionData.noise.push(xesProbeNoise);
+			positionData.background.push(xesProbeNoise);
 		}
 
 		return positionData;

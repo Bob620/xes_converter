@@ -8,6 +8,7 @@ class Directory {
 		this.data = {
 			name: options.name ? options.name : uriName[uriName.length-1],
 			uri,
+			parent: options.parent ? options.parent : false,
 			directories: new Map(),
 			files: new Map(),
 			totalSubDirectories: 0
@@ -25,7 +26,7 @@ class Directory {
 		for (const file of files) {
 			if (file.name) { // Is node > 11
 				if (file.isDirectory()) {
-					const dir = new Directory(`${this.data.uri}/${file.name}`, {name: file.name});
+					const dir = new Directory(`${this.data.uri}/${file.name}`, {name: file.name, parent: this});
 					this.data.directories.set(file.name, dir);
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (file.isFile())
@@ -36,7 +37,7 @@ class Directory {
 				stats.name = file;
 
 				if (stats.isDirectory()) {
-					const dir = new Directory(`${this.data.uri}/${file}`, {name: file});
+					const dir = new Directory(`${this.data.uri}/${file}`, {name: file, parent: this});
 					this.data.directories.set(file, dir);
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (stats.isFile())
