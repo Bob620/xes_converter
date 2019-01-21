@@ -37,7 +37,7 @@ class Logger {
 			this.data.logs.set(logName, logger);
 		}
 
-		const [sec, mil] = `${(Date.now() - this.data.startTime) / 1000}`.split('.');
+		const [sec=0, mil=0] = `${(Date.now() - this.data.startTime) / 1000}`.split('.');
 		const time = `${sec}.${mil.length < 3 ? mil.length < 2 ? mil + '00' : mil + '0' : mil}`;
 
 		logger.log.push([time, message]);

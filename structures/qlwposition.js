@@ -43,14 +43,15 @@ module.exports = class {
 			return conversions.xesFileToObject(`${this.data.directory.getUri()}/${this.data.xesFile.name}`, options);
 
 		let output = {
-			data: [],
-			background: []
+			data: [[]],
+			background: [[]]
 		};
 
 		for (let i = 0; i < 2048; i++) {
-			output.data.push(0);
-			output.background.push(0);
+			output.data[0].push(0);
+			output.background[0].push(0);
 		}
+
 		return output;
 	}
 

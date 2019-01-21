@@ -68,7 +68,7 @@ module.exports = {
             log('\n\tDue to uneven binning sizes, position order in csv may be out of alphabetical order.\n');
 
         // y + 1 sets of data and another y + 1 sets of noise based on the ccd camera size
-        for (let i = 0; i < (posByLength[0][0] * posByLength[0][1]) * 2; i++)
+        for (let i = 0; i < posByLength[0][0] * posByLength[0][1] * 2; i++)
             lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 
         for (const [yBins, xBins, {dataCond, xesData}, {mapCond, mapRawCond}] of posByLength) {
