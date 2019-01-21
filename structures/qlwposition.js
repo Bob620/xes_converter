@@ -3,6 +3,11 @@ const fs = require('fs');
 const conditions = require('../util/conditions');
 const conversions = require('../util/conversions');
 
+const constants = require('../util/constants');
+
+const Logger = require('../util/logger');
+const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
+
 module.exports = class {
 	constructor(directory, settings={}) {
 		this.data = {
@@ -10,7 +15,9 @@ module.exports = class {
 			qlwFile: settings.qlwData ? settings.qlwData : false,
 			dataCondFile: settings.dataCond ? settings.dataCond : false,
 			xesFile: false
-		}
+		};
+
+		debugLog(`New QLWPOS  ${directory.getUri()}, qlw: ${this.data.qlwFile.name}, cond: ${this.data.dataCondFile.name}`);
 	}
 
 	supportsXes() {
@@ -53,5 +60,6 @@ module.exports = class {
 
 	setXes(xesFile) {
 		this.data.xesFile = xesFile;
+		debugLog(`QLWPOS xes update ${xesFile.name}`);
 	}
 };

@@ -3,7 +3,8 @@ const constants = require('./constants');
 class Logger {
 	constructor() {
 		this.data = {
-			logs: new Map()
+			logs: new Map(),
+			startTime: Date.now()
 		}
 	}
 
@@ -26,7 +27,7 @@ class Logger {
 		this.data.logs.set(logName, logger);
 	}
 
-	log(logName, message) {
+	log(logName, message='') {
 		let logger = this.data.logs.get(logName);
 		if (!logger) {
 			logger = {
@@ -36,10 +37,13 @@ class Logger {
 			this.data.logs.set(logName, logger);
 		}
 
-		logger.log.push(message);
+		const [sec, mil] = `${(Date.now() - this.data.startTime) / 1000}`.split('.');
+		const time = `${sec}.${mil.length < 3 ? mil.length < 2 ? mil + '00' : mil + '0' : mil}`;
+
+		logger.log.push([time, message]);
 
 		if (logger.options.stdout)
-			console.log(`${logger.options.prefix}${message}`);
+			console.log(`[${time}] ${logger.options.prefix}${message}`);
 	}
 }
 
