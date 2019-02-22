@@ -77,6 +77,10 @@ class Directory {
 	getFiles() {
 		return this.data.files;
 	}
+
+	getParent() {
+		return this.data.parent;
+	}
 }
 
 module.exports = Directory;
