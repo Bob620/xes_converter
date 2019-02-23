@@ -2,7 +2,7 @@
   "name": "xes_converter",
   "version": "5.0.0",
   "description": "Converter for Microprobe xes and qlw files",
-  "main": "index.js",
+  "main": "module.js",
   "bin": {
     "xes_converter": "index.js"
   },
@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/Bob620/xes_converter#readme",
   "dependencies": {
-    "bit-buffer": "^0.2.3"
+    "bit-buffer": "^0.2.3",
+    "signal-exit": "^3.0.2"
   }
 }

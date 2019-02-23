@@ -1,10 +1,10 @@
 #! /usr/bin/env node
 
 const Processor = require('./processor');
+const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
 
-const Logger = require('./util/logger');
 Logger.setLog(constants.logger.names.defaultLog, {stdout: true});
 const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
