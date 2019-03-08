@@ -36,13 +36,7 @@ module.exports = {
 		if (!options.xes && !options.qlw && !options.sum)
 			options.xes = true;
 
-		// try to process using options given
-		try {
-			Processor(options);
-		} catch (err) {
-			console.log(err);
-			debugLog(err.message);
-		}
+		return Processor(options);
 	},
 	Classifier,
 	conversions,
