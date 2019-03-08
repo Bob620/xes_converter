@@ -8,7 +8,7 @@ const Logger = require('./util/logger');
 const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
 
-module.exports = options => {
+module.exports = async options => {
 	log('Preparing...');
 	// Timing used mostly for fluff information
 	const initialStartTime = Date.now();
@@ -16,13 +16,17 @@ module.exports = options => {
 	debugLog(`Iterating through ${options.topDirectoryUri}`);
 
 	// Create the top directory and classify objects
-	const topDirectory = new Directory(options.topDirectoryUri);
+	const topDirectory = new Directory(options.topDirectoryUri, {doNotUpdate: true});
 	const classify = new Classify(options);
 
-	debugLog(`Classifying directories`);
+	debugLog('Asynchronously updating top directory.');
+	await topDirectory.update();
 
 	// Classify all directories under the top directory
-	classify.exploreDirectory(topDirectory);
+	debugLog('Asynchronously classifying directories');
+	await classify.exploreDirectory(topDirectory);
+
+	debugLog('All directories classified');
 
 	// This is the main uri for output of data
 //	const baseFileName = `${options.outputDirectoryUri ? options.outputDirectoryUri : topDirectory.getUri()}/${topDirectory.getName().toLowerCase()}`;

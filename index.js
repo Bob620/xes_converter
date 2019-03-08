@@ -228,42 +228,74 @@ else {
 	else {
 		// try to process using options given
 		try {
-			Processor(options);
+			Processor(options).then(() => {
+				const readline = require('readline');
+
+				const rl = readline.createInterface({
+					input: process.stdin,
+					output: process.stdout
+				});
+
+				rl.question('\n\nDo you want to save this log [y/n]: ', answer => {
+					if (answer[0] === 'y') {
+						let log = Logger.getLog(constants.logger.names.defaultLog).log;
+
+						rl.question('Do you want to include the debug log [y/n]: ', answer => {
+							if (answer[0] === 'y')
+								log = log.concat(Logger.getLog(constants.logger.names.debugLog).log);
+
+							log.sort(([timeA], [timeB]) => timeA - timeB);
+
+							const fs = require('fs');
+
+							// Screw Windows new lines
+							fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, log.map(([time, line]) => `[${time}] ${line.replace(/\n/gi, '\r\n')}`).join('\r\n'));
+							console.log('Log written to file');
+
+							rl.close();
+							process.exit(0);
+						});
+					} else {
+						rl.close();
+						process.exit(0);
+					}
+				});
+			});
 		} catch (err) {
 			console.log(err);
 			debugLog(err.message);
-		}
 
-		const readline = require('readline');
+			const readline = require('readline');
 
-		const rl = readline.createInterface({
-			input: process.stdin,
-			output: process.stdout
-		});
+			const rl = readline.createInterface({
+				input: process.stdin,
+				output: process.stdout
+			});
 
-		rl.question('\n\nDo you want to save this log [y/n]: ', answer => {
-			if (answer[0] === 'y') {
-				let log = Logger.getLog(constants.logger.names.defaultLog).log;
+			rl.question('\n\nDo you want to save this log [y/n]: ', answer => {
+				if (answer[0] === 'y') {
+					let log = Logger.getLog(constants.logger.names.defaultLog).log;
 
-				rl.question('Do you want to include the debug log [y/n]: ', answer => {
-					if (answer[0] === 'y')
-						log = log.concat(Logger.getLog(constants.logger.names.debugLog).log);
+					rl.question('Do you want to include the debug log [y/n]: ', answer => {
+						if (answer[0] === 'y')
+							log = log.concat(Logger.getLog(constants.logger.names.debugLog).log);
 
-					log.sort(([timeA], [timeB]) => timeA - timeB);
+						log.sort(([timeA], [timeB]) => timeA - timeB);
 
-					const fs = require('fs');
+						const fs = require('fs');
 
-					// Screw Windows new lines
-					fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, log.map(([time, line]) => `[${time}] ${line.replace(/\n/gi, '\r\n')}`).join('\r\n'));
-					console.log('Log written to file');
+						// Screw Windows new lines
+						fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, log.map(([time, line]) => `[${time}] ${line.replace(/\n/gi, '\r\n')}`).join('\r\n'));
+						console.log('Log written to file');
 
+						rl.close();
+						process.exit(0);
+					});
+				} else {
 					rl.close();
 					process.exit(0);
-				});
-			} else {
-				rl.close();
-				process.exit(0);
-			}
-		});
+				}
+			});
+		}
 	}
 }

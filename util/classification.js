@@ -57,12 +57,20 @@ module.exports = class {
 		return this.data.lines;
 	}
 
-	exploreDirectory(directory) {
+	syncExploreDirectory(directory) {
 		this.classifyDirectory(directory);
 
-		for (const [, dir] of directory.getDirectories()) {
-			this.exploreDirectory(dir);
-		}
+		for (const [, dir] of directory.getDirectories())
+			this.syncExploreDirectory(dir);
+	}
+
+	exploreDirectory(directory) {
+		let promises = [this.classifyDirectory(directory)];
+
+		for (const [, dir] of directory.getDirectories())
+			promises.push(this.exploreDirectory(dir));
+
+		return Promise.all(promises);
 	}
 
 	classifyDirectory(directory) {
