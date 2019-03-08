@@ -5,7 +5,7 @@ const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
 
-Logger.setLog(constants.logger.names.defaultLog, {stdout: true});
+Logger.setLog(constants.logger.names.defaultLog, {stdout: false});
 const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
 Logger.setLog(constants.logger.names.debugLog, {stdout: false});
