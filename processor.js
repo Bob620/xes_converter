@@ -17,14 +17,13 @@ module.exports = async options => {
 
 	// Create the top directory and classify objects
 	const topDirectory = new Directory(options.topDirectoryUri, {doNotUpdate: true});
-	const classify = new Classify(options);
 
 	debugLog('Asynchronously updating top directory.');
 	await topDirectory.update();
 
 	// Classify all directories under the top directory
 	debugLog('Asynchronously classifying directories');
-	await classify.exploreDirectory(topDirectory);
+	const classify = await Classify.classify(topDirectory, options);
 
 	debugLog('All directories classified');
 
@@ -35,8 +34,8 @@ module.exports = async options => {
 
 	debugLog(`Base file location: ${baseFileLocation}`);
 
-	log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories()} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
-	log(`${classify.totalQlws()} qlw directories with ${classify.totalQlwPoints()} positions, ${classify.totalMaps()} map directories, ${classify.totalLines()} line directories, `);
+	log(`${topDirectory.totalSubDirectories()} directories traversed and ${classify.totalDirectories} classified in ${(Date.now() - initialStartTime) / 1000} seconds.`);
+	log(`${classify.qlws.size} qlw directories with ${classify.totalQlwPositions} positions, ${classify.maps.size} map directories, ${classify.lines.size} line directories, `);
 
 	debugLog('Starting processing of directories and files');
 
@@ -47,8 +46,8 @@ module.exports = async options => {
 
 		// Gather qlw and map objects
 		// Maps will be used to compare with qmaps
-		const qlws = classify.getQlws();
-		const maps = classify.getMaps();
+		const qlws = classify.qlws;
+		const maps = classify.maps;
 
 		debugLog(`${qlws.size} qlws, ${maps.size} maps`);
 

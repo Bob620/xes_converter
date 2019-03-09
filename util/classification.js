@@ -1,104 +1,137 @@
 const constants = require('./constants');
+const { createEmit } = require('../util/emitter');
 
 const Qlw = require('../structures/qlw');
 const QlwPosition = require('../structures/qlwposition');
 const MapThing = require('../structures/map');
 
-module.exports = class {
-	constructor(options={}) {
-		this.data = {
-			options,
-			totalQlwPoints: 0,
+module.exports = {
+	syncClassify: (dir, options) => {
+		options.emit = createEmit(options.emitter, 'syncClassify', dir.getName());
+
+		const data = syncExploreDirectory(dir, options);
+		let output = {
+			totalDirectories: 0,
+			totalQlwPositions: 0,
 			qlws: new Map(),
 			maps: new Map(),
 			lines: new Map()
-		}
-	}
+		};
 
-	totalDirectories() {
-		let total = this.data.qlws.size;
+		data.map(({uri, data}) => {
+			if (data.qlw) {
+				output.qlws.set(uri, data.qlw);
+				output.totalQlwPositions += data.qlw.totalPositions();
+			}
 
-		for (const [uri] of this.data.maps)
-			if (!this.data.qlws.has(uri))
-				total++;
+			if (data.map)
+				output.maps.set(uri, data.map);
 
-		for (const [uri] of this.data.lines)
-			if (!this.data.qlw.has(uri) && !this.data.maps.has(uri))
-				total++;
+			if (data.line)
+				output.lines.set(uri, data.line);
+		});
 
-		return total;
-	}
+		output.totalDirectories = output.qlws.size;
 
-	totalQlws() {
-		return this.data.qlws.size;
-	}
+		for (const [uri] of output.maps)
+			if (!output.qlws.has(uri))
+				output.totalDirectories++;
 
-	totalQlwPoints() {
-		return this.data.totalQlwPoints;
-	}
+		for (const [uri] of output.lines)
+			if (!output.qlws.has(uri) && !output.maps.has(uri))
+				output.totalDirectories++;
 
-	totalMaps() {
-		return this.data.maps.size;
-	}
+		return output;
+	},
+	classify: async (dir, options) => {
+		options.emit = createEmit(options.emitter, 'classify', dir.getName());
 
-	totalLines() {
-		return this.data.lines.size;
-	}
+		let data = await Promise.all(exploreDirectory(dir, options));
+		let output = {
+			totalDirectories: 0,
+			totalQlwPositions: 0,
+			qlws: new Map(),
+			maps: new Map(),
+			lines: new Map()
+		};
 
-	getQlws() {
-		return this.data.qlws;
-	}
+		data.map(({uri, data}) => {
+			if (data.qlw) {
+				output.qlws.set(uri, data.qlw);
+				output.totalQlwPositions += data.qlw.totalPositions();
+			}
 
-	getMaps() {
-		return this.data.maps;
-	}
+			if (data.map)
+				output.maps.set(uri, data.map);
 
-	getLines() {
-		return this.data.lines;
-	}
+			if (data.line)
+				output.lines.set(uri, data.line);
+		});
 
-	syncExploreDirectory(directory) {
-		this.classifyDirectory(directory);
+		output.totalDirectories = output.qlws.size;
 
-		for (const [, dir] of directory.getDirectories())
-			this.syncExploreDirectory(dir);
-	}
+		for (const [uri] of output.maps)
+			if (!output.qlws.has(uri))
+				output.totalDirectories++;
 
-	exploreDirectory(directory) {
-		let promises = [this.classifyDirectory(directory)];
+		for (const [uri] of output.lines)
+			if (!output.qlws.has(uri) && !output.maps.has(uri))
+				output.totalDirectories++;
 
-		for (const [, dir] of directory.getDirectories())
-			promises.push(this.exploreDirectory(dir));
-
-		return Promise.all(promises);
-	}
-
-	classifyDirectory(directory) {
-		let qlw;
-		let map;
-		let line;
-
-		this.data.options.map = true;
-
-		if (this.data.options.qlw || this.data.options.xes || this.data.options.sum)
-			qlw = qlwTopFilter(directory, this.data.options.loose);
-		if (this.data.options.map)
-			map = mapPositionFilter(directory, this.data.options.loose);
-		if (this.data.options.line)
-			line = lineTopFilter(directory, this.data.options.loose);
-
-		if (qlw) {
-			this.data.qlws.set(directory.getUri(), qlw);
-			this.data.totalQlwPoints += qlw.totalPoints();
-		}
-		if (map)
-			this.data.maps.set(directory.getUri(), map);
-		if (line)
-			this.data.lines.set(directory.getUri(), line);
+		return output;
 	}
 };
 
-function qlwTopFilter(directory, strict=true) {
+function syncExploreDirectory(directory, options) {
+	options.emit('Exploring directory...');
+	let classifications = [classifyDirectory(directory, options)];
+
+	for (const [, dir] of directory.getDirectories())
+		classifications = classifications.concat(syncExploreDirectory(dir, options));
+
+	return classifications;
+}
+
+function exploreDirectory(directory, options) {
+	options.emit('Exploring directory...');
+	let promises = [classifyDirectory(directory, options)];
+
+	for (const [, dir] of directory.getDirectories())
+		promises = promises.concat(exploreDirectory(dir, options));
+
+	return promises;
+}
+
+function classifyDirectory(directory, options) {
+	let data = {};
+
+	options.map = true;
+
+	if ((options.qlw || options.xes || options.sum)) {
+		const qlw = qlwTopFilter(directory, options);
+		if (qlw)
+			data.qlw = qlw;
+	}
+
+	if (options.map) {
+		const map = mapPositionFilter(directory, options);
+		if (map)
+			data.map = map;
+	}
+
+	if (options.line) {
+		const line = lineTopFilter(directory, options);
+		if (line)
+			data.line = line;
+	}
+
+	return {
+		uri: directory.getUri(),
+		data
+	}
+}
+
+function qlwTopFilter(directory, {strict=true}) {
 	const files = directory.getFiles();
 	const directories = directory.getDirectories();
 
@@ -119,12 +152,12 @@ function qlwTopFilter(directory, strict=true) {
 
 	// Optional tests
 	for (const [, dir] of directories) {
-		const output = qlwPositionFind(dir, strict);
+		const output = qlwPositionFind(dir, {strict});
 
 		if (output) {
 			let pos = new QlwPosition(dir, output);
 
-			pos.setXes(xesPositionFind(dir, strict));
+			pos.setXes(xesPositionFind(dir, {strict}));
 			qlw.setPosition(pos);
 		}
 	}
@@ -134,7 +167,7 @@ function qlwTopFilter(directory, strict=true) {
 	return false;
 }
 
-function qlwPositionFind(directory, strict) {
+function qlwPositionFind(directory, {strict}) {
 	const files = directory.getFiles();
 
 	let output = {
@@ -154,7 +187,7 @@ function qlwPositionFind(directory, strict) {
 	return output;
 }
 
-function xesPositionFind(directory, strict) {
+function xesPositionFind(directory, {strict}) {
 	const files = directory.getFiles();
 	const defaultXesFile = files.get(constants.classification.qlw.pos.xes);
 
@@ -174,7 +207,7 @@ function xesPositionFind(directory, strict) {
 	return false;
 }
 
-function mapPositionFilter(directory, strict) {
+function mapPositionFilter(directory, {strict}) {
 	const files = directory.getFiles();
 
 	let output = {
@@ -200,7 +233,7 @@ function mapPositionFilter(directory, strict) {
 	return map;
 }
 
-function lineTopFilter(directory, strict=true) {
+function lineTopFilter(directory, {strict=true}) {
 	const subDir = directory.getDirectories();
 
 	if (subDir.size > 0) {
@@ -210,6 +243,6 @@ function lineTopFilter(directory, strict=true) {
 	return false;
 }
 
-function linePositionFind(directory, strict) {
+function linePositionFind(directory, {strict}) {
 	return false;
 }

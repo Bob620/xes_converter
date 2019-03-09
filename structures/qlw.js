@@ -20,7 +20,7 @@ module.exports = class {
 		debugLog(`       : raw: ${this.data.mapRawCondFile.name}, cond: ${this.data.mapCondFile.name}`);
 	}
 
-	totalPoints() {
+	totalPositions() {
 		return this.data.positions.size;
 	}
 
