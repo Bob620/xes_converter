@@ -52,7 +52,10 @@ converter.data.emitter.on('directory', (id, log) => {
 let classifiedDirectories = 0;
 
 converter.data.emitter.on('classify', (id, log) => {
-	console.log(`${id}  |  ${log}  |  ${Math.floor((classifiedDirectories++/converter.data.workingDir.totalSubDirectories())*100)}%`);
+	if (log === 'new')
+		console.log(`${id}  |  ${Math.floor((classifiedDirectories++/converter.data.workingDir.totalSubDirectories())*100)}%`);
+	else
+		console.log(`${id}  |  ${log}`);
 });
 
 converter.setWorkingDirectory('C:\\Users\\brude\\work');

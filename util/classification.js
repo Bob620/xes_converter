@@ -9,6 +9,7 @@ module.exports = {
 	syncClassify: (dir, options) => {
 		options.emit = createEmit(options.emitter, 'syncClassify', dir.getName());
 
+		options.emit('Exploring directory...');
 		const data = syncExploreDirectory(dir, options);
 		let output = {
 			totalDirectories: 0,
@@ -18,6 +19,7 @@ module.exports = {
 			lines: new Map()
 		};
 
+		options.emit('Finalizing directory classification...');
 		data.map(({uri, data}) => {
 			if (data.qlw) {
 				output.qlws.set(uri, data.qlw);
@@ -41,11 +43,13 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
+		options.emit(`${output.totalDirectories} classified with ${output.totalQlwPositions} identified`);
 		return output;
 	},
 	classify: async (dir, options) => {
 		options.emit = createEmit(options.emitter, 'classify', dir.getName());
 
+		options.emit('Exploring directory...');
 		let data = await Promise.all(exploreDirectory(dir, options));
 		let output = {
 			totalDirectories: 0,
@@ -55,6 +59,7 @@ module.exports = {
 			lines: new Map()
 		};
 
+		options.emit('Finalizing directory classification...');
 		data.map(({uri, data}) => {
 			if (data.qlw) {
 				output.qlws.set(uri, data.qlw);
@@ -78,12 +83,13 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
+		options.emit(`${output.totalDirectories} directories classified with ${output.totalQlwPositions} qlw positions identified`);
 		return output;
 	}
 };
 
 function syncExploreDirectory(directory, options) {
-	options.emit('Exploring directory...');
+	options.emit('new');
 	let classifications = [classifyDirectory(directory, options)];
 
 	for (const [, dir] of directory.getDirectories())
@@ -93,7 +99,7 @@ function syncExploreDirectory(directory, options) {
 }
 
 function exploreDirectory(directory, options) {
-	options.emit('Exploring directory...');
+	options.emit('new');
 	let promises = [classifyDirectory(directory, options)];
 
 	for (const [, dir] of directory.getDirectories())
