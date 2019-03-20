@@ -9,57 +9,124 @@ const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
 
-Logger.setLog(constants.logger.names.defaultLog, {stdout: false});
-const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
-
-Logger.setLog(constants.logger.names.debugLog, {stdout: false});
-const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
-
 class Converter {
-	constructor() {
+	constructor(options={}) {
 		this.data = {
+			options,
 			workingDir: false,
+			classifiedWorkingDir: Classifier.createEmptyOutput(),
 			emitter: new EventEmitter()
-		}
+		};
+
+		this.data.autoClassifyOptions = this.transformOptions(options.autoClassifyOptions);
+
+		this.data.emitter.on('message', async ({type, message, data}) => {
+			type = type.split('.');
+
+			// Main types
+			switch(type[0]) {
+				case 'directory':
+					switch(type[1]) {
+						case 'newDir':
+							break;
+						case 'newFile':
+							break;
+						case 'willUpdate':
+							break;
+						case 'hasUpdated':
+							if (this.data.autoClassifyOptions) {
+								const output = await Classifier.classifySingleDirectory(data, this.data.autoClassifyOptions);
+								this.data.classifiedWorkingDir = Classifier.mergeClassified(this.data.classifiedWorkingDir, output);
+							}
+							break;
+						case 'willClear':
+							break;
+					}
+					break;
+				case 'classify':
+					break;
+			}
+		});
+	}
+
+	transformOptions(options={}) {
+		options.emitter = options.emitter ? options.emitter : this.data.emitter;
+
+		return options;
 	}
 
 	setWorkingDirectory(uri, options={}) {
-		if (!options.emitter)
-			options.emitter = this.data.emitter;
+		options = this.transformOptions(options);
 
-		if (typeof(uri) === 'string') {
+		options.doNotUpdate = this.data.autoClassifyOptions;
+
+		if (typeof (uri) === 'string')
 			this.data.workingDir = new Directory(uri, options);
-		} else
+		else
 			this.data.workingDir = uri;
+
+		if (this.data.autoClassifyOptions)
+			if (this.data.options.async)
+				return this.data.workingDir.update();
+			else
+				return this.data.workingDir.syncUpdate();
 	}
 
 	classifyWorkingDirectory(options={}) {
-		if (!options.emitter)
-			options.emitter = this.data.emitter;
+		options = this.transformOptions(options);
+
+		let classifiedOutput = Classifier.createEmptyOutput();
 
 		if (this.data.workingDir)
-			Classifier.classify(this.data.workingDir, options)
+			if (this.data.options.async)
+				classifiedOutput = Classifier.classify(this.data.workingDir, options);
+			else
+				classifiedOutput = Classifier.syncClassify(this.data.workingDir, options);
+
+		this.data.classifiedWorkingDir = classifiedOutput;
+		return classifiedOutput;
 	}
 
 }
 
-const converter = new Converter();
-
-converter.data.emitter.on('directory', (id, log) => {
-	console.log(`${id}  |  ${log}`);
+const converter = new Converter({
+	async: false
 });
 
-let classifiedDirectories = 0;
-
-converter.data.emitter.on('classify', (id, log) => {
-	if (log === 'new')
-		console.log(`${id}  |  ${Math.floor((classifiedDirectories++/converter.data.workingDir.totalSubDirectories())*100)}%`);
-	else
-		console.log(`${id}  |  ${log}`);
+const asyncConverter = new Converter({
+	autoClassifyOptions: {xes: true, qlw: true, sum: true, map: true},
+	async: true
 });
 
-converter.setWorkingDirectory('C:\\Users\\brude\\work');
+converter.data.emitter.on('message', ({type, message, data}) => {
+	console.log(`${type}  |  ${message}`);
+});
+
+asyncConverter.data.emitter.on('message', ({type, message, data}) => {
+	console.log(`${type}  |  ${message}`);
+});
+
+//converter.data.emitter.on('directory', (id, log) => {
+//	console.log(`${id}  |  ${log}`);
+//});
+
+//let classifiedDirectories = 0;
+
+//converter.data.emitter.on('classify', (id, log) => {
+//	if (log === 'new')
+//		console.log(`${id}  |  ${Math.floor((classifiedDirectories++/converter.data.workingDir.totalSubDirectories())*100)}%`);
+//	else
+//		console.log(`${id}  |  ${log}`);
+//});
+
+converter.setWorkingDirectory('/home/mia/Downloads/Anette/');
+converter.data.workingDir.syncUpdate();
 converter.classifyWorkingDirectory({xes: true, qlw: true, sum: true, map: true});
+
+asyncConverter.setWorkingDirectory('/home/mia/Downloads/Anette/').then(() => {
+	console.log(`ASYNC:    ${asyncConverter.data.classifiedWorkingDir.totalDirectories} directories classified with ${asyncConverter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
+	console.log(` SYNC:    ${converter.data.classifiedWorkingDir.totalDirectories} directories classified with ${converter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
+});
 
 /*
 

@@ -7,19 +7,15 @@ const MapThing = require('../structures/map');
 
 module.exports = {
 	syncClassify: (dir, options) => {
-		options.emit = createEmit(options.emitter, 'syncClassify', dir.getName());
+		options.emit = createEmit(options.emitter, 'classify', dir.getName());
 
-		options.emit('Exploring directory...');
+		options.emit('exploring.start', {dir, options, sync: true}, 'Exploring directory...');
 		const data = syncExploreDirectory(dir, options);
-		let output = {
-			totalDirectories: 0,
-			totalQlwPositions: 0,
-			qlws: new Map(),
-			maps: new Map(),
-			lines: new Map()
-		};
+		options.emit('exploring.end', {dir, options, data, sync: true}, 'Finished exploring directory');
 
-		options.emit('Finalizing directory classification...');
+		let output = createEmptyOutput();
+
+		options.emit('classifying', {dir, options, sync: true}, 'Finalizing directory classification...');
 		data.map(({uri, data}) => {
 			if (data.qlw) {
 				output.qlws.set(uri, data.qlw);
@@ -43,23 +39,19 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
-		options.emit(`${output.totalDirectories} classified with ${output.totalQlwPositions} identified`);
+		options.emit('classified', {dir, options, output, sync: true}, `${output.totalDirectories} classified with ${output.totalQlwPositions} identified`);
 		return output;
 	},
 	classify: async (dir, options) => {
 		options.emit = createEmit(options.emitter, 'classify', dir.getName());
 
-		options.emit('Exploring directory...');
+		options.emit('exploring.start', {dir, options, sync: false}, 'Exploring directory...');
 		let data = await Promise.all(exploreDirectory(dir, options));
-		let output = {
-			totalDirectories: 0,
-			totalQlwPositions: 0,
-			qlws: new Map(),
-			maps: new Map(),
-			lines: new Map()
-		};
+		options.emit('exploring.end', {dir, options, data, sync: false}, 'Finished exploring directory');
 
-		options.emit('Finalizing directory classification...');
+		let output = createEmptyOutput();
+
+		options.emit('classifying', {dir, options, sync: false}, 'Finalizing directory classification...');
 		data.map(({uri, data}) => {
 			if (data.qlw) {
 				output.qlws.set(uri, data.qlw);
@@ -83,13 +75,83 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
-		options.emit(`${output.totalDirectories} directories classified with ${output.totalQlwPositions} qlw positions identified`);
+		options.emit('classified', {dir, options, output, sync: false}, `${output.totalDirectories} directories classified with ${output.totalQlwPositions} qlw positions identified`);
 		return output;
-	}
+	},
+	classifySingleDirectory: async (dir, options) => {
+		options.emit = createEmit(options.emitter, 'classify', dir.getName());
+
+		const {uri, data} = await classifyDirectory(dir, options);
+		let output = createEmptyOutput();
+
+		options.emit('classifying', {dir, options}, 'Finalizing directory classification...');
+		if (data.qlw) {
+			output.qlws.set(uri, data.qlw);
+			output.totalQlwPositions += data.qlw.totalPositions();
+		}
+
+		if (data.map)
+			output.maps.set(uri, data.map);
+
+		if (data.line)
+			output.lines.set(uri, data.line);
+
+		output.totalDirectories = output.qlws.size;
+
+		for (const [uri] of output.maps)
+			if (!output.qlws.has(uri))
+				output.totalDirectories++;
+
+		for (const [uri] of output.lines)
+			if (!output.qlws.has(uri) && !output.maps.has(uri))
+				output.totalDirectories++;
+
+		options.emit('classified', {dir, options, output}, `${output.totalDirectories} directories classified with ${output.totalQlwPositions} qlw positions identified`);
+		return output;
+	},
+	createEmptyOutput,
+	mergeClassified
 };
 
+function mergeClassified(classifiedOne, classifiedTwo) {
+	let output = createEmptyOutput();
+	if (classifiedOne && classifiedTwo) {
+		output.qlws = new Map([...classifiedOne.qlws, ...classifiedTwo.qlws]);
+		output.maps = new Map([...classifiedOne.maps, ...classifiedTwo.maps]);
+		output.lines = new Map([...classifiedOne.lines, ...classifiedTwo.lines]);
+
+		for (const [, data] of output.qlws)
+			output.totalQlwPositions += data.totalPositions();
+
+		output.totalDirectories = output.qlws.size;
+
+		for (const [uri] of output.maps)
+			if (!output.qlws.has(uri))
+				output.totalDirectories++;
+
+		for (const [uri] of output.lines)
+			if (!output.qlws.has(uri) && !output.maps.has(uri))
+				output.totalDirectories++;
+
+	} else if (classifiedOne && !classifiedTwo)
+		return classifiedOne;
+	else if (!classifiedOne && classifiedTwo)
+		return classifiedTwo;
+	return output;
+}
+
+function createEmptyOutput() {
+	return {
+		totalDirectories: 0,
+		totalQlwPositions: 0,
+		qlws: new Map(),
+		maps: new Map(),
+		lines: new Map()
+	};
+}
+
 function syncExploreDirectory(directory, options) {
-	options.emit('new');
+	options.emit('exploring.new', {dir: directory, options}, 'New directory found, exploring...');
 	let classifications = [classifyDirectory(directory, options)];
 
 	for (const [, dir] of directory.getDirectories())
@@ -99,7 +161,7 @@ function syncExploreDirectory(directory, options) {
 }
 
 function exploreDirectory(directory, options) {
-	options.emit('new');
+	options.emit('exploring.new', {dir: directory, options}, 'New directory found, exploring...');
 	let promises = [classifyDirectory(directory, options)];
 
 	for (const [, dir] of directory.getDirectories())

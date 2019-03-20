@@ -17,6 +17,7 @@ class Directory {
 		this.data = {
 			name: options.name ? options.name : uriName[uriName.length-1],
 			uri,
+			options,
 			parent: options.parent ? options.parent : false,
 			directories: new Map(),
 			files: new Map(),
@@ -25,7 +26,7 @@ class Directory {
 			emit: createEmit(options.emitter, 'directory', options.name ? options.name : uriName[uriName.length-1]),
 		};
 
-		this.data.emit(`New Directory: ${this.data.name} at ${uri}`);
+		this.data.emit('newDir', this, `New Directory: ${this.data.name} at ${uri}`);
 
 		if (!options.doNotUpdate)
 			this.syncUpdate();
@@ -56,11 +57,14 @@ class Directory {
 	}
 
 	syncUpdate() {
-		this.data.files = new Map();
-		this.data.directories = new Map();
-		this.data.totalSubDirectories = 0;
+		if (this.data.files.size !== 0 || this.data.directories.size !== 0 || this.data.totalSubDirectories !== 0) {
+			this.data.emit('willClear', copyDir(this), 'Clearing directory for update...');
+			this.data.files = new Map();
+			this.data.directories = new Map();
+			this.data.totalSubDirectories = 0;
+		}
 
-		this.data.emit('Updating directory...');
+		this.data.emit('willUpdate', this, 'Updating directory...');
 		const files = fs.readdirSync(this.data.uri, {
 			withFileTypes: true
 		});
@@ -74,7 +78,7 @@ class Directory {
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (file.isFile()) {
 					this.data.files.set(file.name, file);
-					this.data.emit(`New File: ${file.name} in ${this.data.uri}`);
+					this.data.emit('newFile', this, `New File: ${file.name} in ${this.data.uri}`);
 				}
 			} else { // Is node < 11
 				// Get stats for the item
@@ -87,18 +91,23 @@ class Directory {
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (stats.isFile()) {
 					this.data.files.set(stats.name, stats);
-					this.data.emit(`New File: ${stats.name} in ${this.data.uri}`);
+					this.data.emit('newFile', this, `New File: ${stats.name} in ${this.data.uri}`);
 				}
 			}
 		}
+
+		this.data.emit('hasUpdated', this, 'Directory updated.');
 	}
 
 	async update() {
-		this.data.files = new Map();
-		this.data.directories = new Map();
-		this.data.totalSubDirectories = 0;
+		if (this.data.files.size !== 0 || this.data.directories.size !== 0 || this.data.totalSubDirectories !== 0) {
+			this.data.emit('willClear', copyDir(this), 'Clearing directory for update...');
+			this.data.files = new Map();
+			this.data.directories = new Map();
+			this.data.totalSubDirectories = 0;
+		}
 
-		this.data.emit('Updating directory asynchronously...');
+		this.data.emit('willUpdate', this, 'Updating directory asynchronously...');
 		let subDirs = [];
 		const files = await promisefs.readDir(this.data.uri, {
 			withFileTypes: true
@@ -113,7 +122,7 @@ class Directory {
 					subDirs.push(dir.update());
 				} else if (file.isFile()) {
 					this.data.files.set(file.name, file);
-					this.data.emit(`New File: ${file.name} in ${this.data.uri}`);
+					this.data.emit('newFile', this, `New File: ${file.name} in ${this.data.uri}`);
 				}
 			} else { // Is node < 11
 				// Get stats for the item
@@ -127,17 +136,29 @@ class Directory {
 					subDirs.push(dir.update());
 				} else if (stats.isFile()) {
 					this.data.files.set(stats.name, stats);
-					this.data.emit(`New File: ${stats.name} in ${this.data.uri}`);
+					this.data.emit('newFile', this, `New File: ${stats.name} in ${this.data.uri}`);
 				}
 			}
 		}
 
 		return Promise.all(subDirs).then(() => {
-			this.data.emit('Directory asynchronously updated.');
+			this.data.emit('hasUpdated', this, 'Directory asynchronously updated.');
 			for (const [,dir] of this.getDirectories())
 				this.data.totalSubDirectories += dir.totalSubDirectories();
 		});
 	}
+}
+
+function copyDir(dir) {
+	let options = dir.data.options;
+	options.doNotUpdate = true;
+
+	let dirCopy = new Directory(dir.data.uri, options);
+	dirCopy.data.totalSubDirectories = dir.data.totalSubDirectories;
+	dirCopy.data.files = new Map(JSON.parse(JSON.stringify(Array.from(dir.data.files))));
+	dirCopy.data.directories = new Map(JSON.parse(JSON.stringify(Array.from(dir.data.directories))));
+
+	return dirCopy;
 }
 
 module.exports = Directory;
