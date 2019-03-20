@@ -4,20 +4,20 @@ const conditions = require('../util/conditions');
 const conversions = require('../util/conversions');
 
 const constants = require('../util/constants');
-
-const Logger = require('../util/logger');
-const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
+const { createEmit } = require('../util/emitter');
 
 module.exports = class {
-	constructor(directory, settings={}) {
+	constructor(directory, options={}) {
 		this.data = {
 			directory,
-			qlwFile: settings.qlwData ? settings.qlwData : false,
-			dataCondFile: settings.dataCond ? settings.dataCond : false,
-			xesFile: false
+			qlwFile: options.qlwData ? options.qlwData : false,
+			dataCondFile: options.dataCond ? options.dataCond : false,
+			xesFile: false,
+			emitter: options.emitter,
+			emit: createEmit(options.emitter, directory.getName())
 		};
 
-		debugLog(`New QLWPOS  ${directory.getUri()}, qlw: ${this.data.qlwFile.name}, cond: ${this.data.dataCondFile.name}`);
+		this.data.emit(constants.events.qlwPos.NEW, this, `${directory.getUri()}, qlw: ${this.data.qlwFile.name}, cond: ${this.data.dataCondFile.name}`);
 	}
 
 	supportsXes() {
@@ -61,6 +61,6 @@ module.exports = class {
 
 	setXes(xesFile) {
 		this.data.xesFile = xesFile;
-		debugLog(`QLWPOS xes update ${xesFile.name}`);
+		this.data.emit(constants.events.qlwPos.UPDATE, this, `xes update ${xesFile.name}`);
 	}
 };

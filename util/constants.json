@@ -49,6 +49,36 @@
       }
     }
   },
+  "events": {
+    "directory": {
+      "NEWDIR": "directory.newDir",
+      "NEWFILE": "directory.newFile",
+      "WILLUPDATE": "directory.willUpdate",
+      "UPDATED": "directory.hasUpdate",
+      "WILLCLEAR": "directory.willClear",
+      "CLEARED": "directory.cleared"
+    },
+    "classify": {
+      "CLASSIFYING": "classify.classifying",
+      "CLASSIFIED": "classify.classified",
+      "exploring": {
+        "START": "classify.exploring.start",
+        "NEW": "classify.exploring.new",
+        "END": "classify.exploring.end"
+      }
+    },
+    "qlwDir": {
+      "NEW": "qlwDir.new",
+      "pos": {
+        "ADD": "qlwDir.pos.add",
+        "REM": "qlwDir.pos.rem"
+      }
+    },
+    "qlwPos": {
+      "NEW": "qlwPos.new",
+      "UPDATE": "qlwPos.update"
+    }
+  },
   "metadata": [
     ["mapCond", "xm_cp_project_name", "projectName"],
     ["dataCond", "xm_cp_comment", "comment"],

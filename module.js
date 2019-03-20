@@ -21,29 +21,15 @@ class Converter {
 		this.data.autoClassifyOptions = this.transformOptions(options.autoClassifyOptions);
 
 		this.data.emitter.on('message', async ({type, message, data}) => {
-			type = type.split('.');
-
-			// Main types
-			switch(type[0]) {
-				case 'directory':
-					switch(type[1]) {
-						case 'newDir':
-							break;
-						case 'newFile':
-							break;
-						case 'willUpdate':
-							break;
-						case 'hasUpdated':
-							if (this.data.autoClassifyOptions) {
-								const output = await Classifier.classifySingleDirectory(data, this.data.autoClassifyOptions);
-								this.data.classifiedWorkingDir = Classifier.mergeClassified(this.data.classifiedWorkingDir, output);
-							}
-							break;
-						case 'willClear':
-							break;
+			switch(type) {
+				case constants.events.directory.UPDATED:
+					if (this.data.autoClassifyOptions) {
+						const output = await Classifier.classifySingleDirectory(data.dir, this.data.autoClassifyOptions);
+						this.data.classifiedWorkingDir = Classifier.mergeClassified(this.data.classifiedWorkingDir, output);
 					}
 					break;
-				case 'classify':
+				case constants.events.qlwDir.NEW:
+					console.log(`qlwdir  |  raw: ${data.data.mapRawCondFile.name}, cond: ${data.data.mapCondFile.name}`);
 					break;
 			}
 		});

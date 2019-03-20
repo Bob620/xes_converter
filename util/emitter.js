@@ -1,9 +1,9 @@
 module.exports = {
-	createEmit: (emitter, mainType='generic', id='') => {
+	createEmit: (emitter, id='') => {
 		if (emitter)
-			return (subtype='', data=undefined, message='') => {
+			return (type='', data=undefined, message='') => {
 				emitter.emit('message', {
-					type: `${mainType}${subtype !== '' ? `.${subtype}` : ''}`,
+					type,
 					id,
 					message,
 					data

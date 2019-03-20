@@ -3,21 +3,20 @@ const fs = require('fs');
 const conditions = require('../util/conditions');
 
 const constants = require('../util/constants');
-
-const Logger = require('../util/logger');
-const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
+const { createEmit } = require('../util/emitter');
 
 module.exports = class {
-	constructor(directory, settings={}, positions=new Map()) {
+	constructor(directory, options={}, positions=new Map()) {
 		this.data = {
 			directory,
 			positions,
-			mapRawCondFile: settings.mapRawCond ? settings.mapRawCond : false,
-			mapCondFile: settings.mapCond ? settings.mapCond : false
+			mapRawCondFile: options.mapRawCond ? options.mapRawCond : false,
+			mapCondFile: options.mapCond ? options.mapCond : false,
+			emitter: options.emitter,
+			emit: createEmit(options.emitter, directory.getName())
 		};
 
-		debugLog(`New QLW: ${directory.getUri()} with ${positions.size} positions`);
-		debugLog(`       : raw: ${this.data.mapRawCondFile.name}, cond: ${this.data.mapCondFile.name}`);
+		this.data.emit(constants.events.qlwDir.NEW, this, `${directory.getUri()} with ${positions.size} positions`);
 	}
 
 	totalPositions() {
@@ -46,11 +45,12 @@ module.exports = class {
 
 	setPosition(position) {
 		this.data.positions.set(position.getDirectory().getUri(), position);
-		debugLog(`QLW pos add: ${this.getDirectory().getUri()} given 1 new position ${position.getDirectory().getUri()}`);
+		this.data.emit(constants.events.qlwDir.pos.ADD, {pos:position, qlwDir: this}, `${this.getDirectory().getUri()} given 1 new position ${position.getDirectory().getUri()}`);
 	}
 
 	deletePosition(pointName) {
+		const pos = this.data.positions.get(pointName);
 		this.data.positions.delete(pointName);
-		debugLog(`QLW pos delete: ${this.getDirectory().getUri()} removed 1 position ${pointName}`);
+		this.data.emit(constants.events.qlwDir.pos.REM, {pos, qlwDir: this}, `${this.getDirectory().getUri()} removed 1 position ${pointName}`);
 	}
 };

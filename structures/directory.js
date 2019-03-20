@@ -23,10 +23,10 @@ class Directory {
 			files: new Map(),
 			totalSubDirectories: 0,
 			emitter: options.emitter,
-			emit: createEmit(options.emitter, 'directory', options.name ? options.name : uriName[uriName.length-1]),
+			emit: createEmit(options.emitter, options.name ? options.name : uriName[uriName.length-1]),
 		};
 
-		this.data.emit('newDir', this, `New Directory: ${this.data.name} at ${uri}`);
+		this.data.emit(constants.events.directory.NEWDIR, this, `${this.data.name} at ${uri}`);
 
 		if (!options.doNotUpdate)
 			this.syncUpdate();
@@ -58,13 +58,14 @@ class Directory {
 
 	syncUpdate() {
 		if (this.data.files.size !== 0 || this.data.directories.size !== 0 || this.data.totalSubDirectories !== 0) {
-			this.data.emit('willClear', copyDir(this), 'Clearing directory for update...');
+			this.data.emit(constants.events.directory.WILLCLEAR, copyDir(this), 'Clearing directory for update...');
 			this.data.files = new Map();
 			this.data.directories = new Map();
 			this.data.totalSubDirectories = 0;
+			this.data.emit(constants.events.directory.CLEARED, this, 'directory cleared for update');
 		}
 
-		this.data.emit('willUpdate', this, 'Updating directory...');
+		this.data.emit(constants.events.directory.WILLUPDATE, {dir: this, sync: true}, 'Updating directory...');
 		const files = fs.readdirSync(this.data.uri, {
 			withFileTypes: true
 		});
@@ -78,7 +79,7 @@ class Directory {
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (file.isFile()) {
 					this.data.files.set(file.name, file);
-					this.data.emit('newFile', this, `New File: ${file.name} in ${this.data.uri}`);
+					this.data.emit(constants.events.directory.NEWFILE, {dir: this, fileName: file.name, sync: true}, `${file.name} in ${this.data.uri}`);
 				}
 			} else { // Is node < 11
 				// Get stats for the item
@@ -91,23 +92,24 @@ class Directory {
 					this.data.totalSubDirectories += dir.totalSubDirectories() + 1;
 				} else if (stats.isFile()) {
 					this.data.files.set(stats.name, stats);
-					this.data.emit('newFile', this, `New File: ${stats.name} in ${this.data.uri}`);
+					this.data.emit(constants.events.directory.NEWFILE, {dir: this, fileName: stats.name, sync: true}, `${stats.name} in ${this.data.uri}`);
 				}
 			}
 		}
 
-		this.data.emit('hasUpdated', this, 'Directory updated.');
+		this.data.emit(constants.events.directory.UPDATED, {dir: this, sync: true}, 'Directory updated.');
 	}
 
 	async update() {
 		if (this.data.files.size !== 0 || this.data.directories.size !== 0 || this.data.totalSubDirectories !== 0) {
-			this.data.emit('willClear', copyDir(this), 'Clearing directory for update...');
+			this.data.emit(constants.events.directory.WILLCLEAR, copyDir(this), 'Clearing directory for update...');
 			this.data.files = new Map();
 			this.data.directories = new Map();
 			this.data.totalSubDirectories = 0;
+			this.data.emit(constants.events.directory.CLEARED, this, 'directory cleared for update');
 		}
 
-		this.data.emit('willUpdate', this, 'Updating directory asynchronously...');
+		this.data.emit(constants.events.directory.WILLUPDATE, {dir: this, sync: false}, 'Updating directory asynchronously...');
 		let subDirs = [];
 		const files = await promisefs.readDir(this.data.uri, {
 			withFileTypes: true
@@ -122,7 +124,7 @@ class Directory {
 					subDirs.push(dir.update());
 				} else if (file.isFile()) {
 					this.data.files.set(file.name, file);
-					this.data.emit('newFile', this, `New File: ${file.name} in ${this.data.uri}`);
+					this.data.emit(constants.events.directory.NEWFILE, {dir: this, fileName: file.name, sync: false}, `${file.name} in ${this.data.uri}`);
 				}
 			} else { // Is node < 11
 				// Get stats for the item
@@ -136,13 +138,13 @@ class Directory {
 					subDirs.push(dir.update());
 				} else if (stats.isFile()) {
 					this.data.files.set(stats.name, stats);
-					this.data.emit('newFile', this, `New File: ${stats.name} in ${this.data.uri}`);
+					this.data.emit(constants.events.directory.NEWFILE, {dir: this, fileName: stats.name, sync: false}, `${stats.name} in ${this.data.uri}`);
 				}
 			}
 		}
 
 		return Promise.all(subDirs).then(() => {
-			this.data.emit('hasUpdated', this, 'Directory asynchronously updated.');
+			this.data.emit(constants.events.directory.UPDATED, {dir: this, sync: false}, 'Directory asynchronously updated.');
 			for (const [,dir] of this.getDirectories())
 				this.data.totalSubDirectories += dir.totalSubDirectories();
 		});
