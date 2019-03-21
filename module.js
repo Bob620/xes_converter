@@ -22,14 +22,60 @@ class Converter {
 
 		this.data.emitter.on('message', async ({type, message, data}) => {
 			switch(type) {
+				case constants.events.directory.WILLCLEAR:
+					console.log(`${type}  |  Clearing directory for update...`);
+					break;
+				case constants.events.directory.CLEARED:
+					console.log(`${type}  |  directory cleared for update`);
+					break;
+				case constants.events.directory.WILLUPDATE:
+					console.log(`${type}  |  Updating directory...`);
+					break;
 				case constants.events.directory.UPDATED:
+					console.log(`${type}  |  Directory updated.`);
 					if (this.data.autoClassifyOptions) {
+						console.log(`${type}  |  Automatically classifying updated directory...`);
 						const output = await Classifier.classifySingleDirectory(data.dir, this.data.autoClassifyOptions);
 						this.data.classifiedWorkingDir = Classifier.mergeClassified(this.data.classifiedWorkingDir, output);
+						console.log(`${type}  |  Directory automatically classified`);
 					}
 					break;
+				case constants.events.directory.NEWDIR:
+					console.log(`${type}  |  ${data.data.name} at ${data.getUri()}`);
+					break;
+				case constants.events.directory.NEWFILE:
+					console.log(`${type}  |  ${data.fileName} in ${data.dir.getUri()}`);
+					break;
+				case constants.events.classify.CLASSIFYING:
+					console.log(`${type}  |  Finalizing directory classification...`);
+					break;
+				case constants.events.classify.CLASSIFIED:
+					console.log(`${type}  |  ${data.output.totalDirectories} classified with ${data.output.totalQlwPositions} identified`);
+					break;
+				case constants.events.classify.exploring.START:
+					console.log(`${type}  |  Exploring directory...`);
+					break;
+				case constants.events.classify.exploring.NEW:
+					console.log(`${type}  |  New directory found, exploring...`);
+					break;
+				case constants.events.classify.exploring.END:
+					console.log(`${type}  |  Finished exploring directory`);
+					break;
 				case constants.events.qlwDir.NEW:
-					console.log(`qlwdir  |  raw: ${data.data.mapRawCondFile.name}, cond: ${data.data.mapCondFile.name}`);
+					console.log(`${type}  |  ${data.getDirectory().getUri()} with ${data.totalPositions()} positions`);
+					console.log(`${type}  |  raw: ${data.data.mapRawCondFile.name}, cond: ${data.data.mapCondFile.name}`);
+					break;
+				case constants.events.qlwDir.pos.ADD:
+					console.log(`${type}  |  ${data.pos.getDirectory().getUri()} given 1 new position ${data.posName}`);
+					break;
+				case constants.events.qlwDir.pos.REM:
+					console.log(`${type}  |  ${data.qlwDir.getDirectory().getUri()} removed 1 position ${data.posName}`);
+					break;
+				case constants.events.qlwPos.NEW:
+					console.log(`${type}  |  ${data.getDirectory().getUri()}, qlw: ${data.data.qlwFile.name}, cond: ${data.data.dataCondFile.name}`);
+					break;
+				case constants.events.qlwPos.UPDATE:
+					console.log(`${type}  |  xes update ${data.xesFile.name}`);
 					break;
 			}
 		});
@@ -85,11 +131,11 @@ const asyncConverter = new Converter({
 });
 
 converter.data.emitter.on('message', ({type, message, data}) => {
-	console.log(`${type}  |  ${message}`);
+//	console.log(`${type}  |  ${message}`);
 });
 
 asyncConverter.data.emitter.on('message', ({type, message, data}) => {
-	console.log(`${type}  |  ${message}`);
+//	console.log(`${type}  |  ${message}`);
 });
 
 //converter.data.emitter.on('directory', (id, log) => {
@@ -110,8 +156,8 @@ converter.data.workingDir.syncUpdate();
 converter.classifyWorkingDirectory({xes: true, qlw: true, sum: true, map: true});
 
 asyncConverter.setWorkingDirectory('/home/mia/Downloads/Anette/').then(() => {
-	console.log(`ASYNC:    ${asyncConverter.data.classifiedWorkingDir.totalDirectories} directories classified with ${asyncConverter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
-	console.log(` SYNC:    ${converter.data.classifiedWorkingDir.totalDirectories} directories classified with ${converter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
+	console.log(`ASYNC:    ${asyncConverter.data.workingDir.totalSubDirectories()} total directories explored, ${asyncConverter.data.classifiedWorkingDir.totalDirectories} directories classified with ${asyncConverter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
+	console.log(` SYNC:    ${converter.data.workingDir.totalSubDirectories()} total directories explored, ${converter.data.classifiedWorkingDir.totalDirectories} directories classified with ${converter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
 });
 
 /*

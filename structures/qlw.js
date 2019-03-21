@@ -16,7 +16,7 @@ module.exports = class {
 			emit: createEmit(options.emitter, directory.getName())
 		};
 
-		this.data.emit(constants.events.qlwDir.NEW, this, `${directory.getUri()} with ${positions.size} positions`);
+		this.data.emit(constants.events.qlwDir.NEW, this);
 	}
 
 	totalPositions() {
@@ -44,13 +44,14 @@ module.exports = class {
 	}
 
 	setPosition(position) {
-		this.data.positions.set(position.getDirectory().getUri(), position);
-		this.data.emit(constants.events.qlwDir.pos.ADD, {pos:position, qlwDir: this}, `${this.getDirectory().getUri()} given 1 new position ${position.getDirectory().getUri()}`);
+		const posName = position.getDirectory().getUri();
+		this.data.positions.set(posName, position);
+		this.data.emit(constants.events.qlwDir.pos.ADD, {pos: position, posName, qlwDir: this});
 	}
 
-	deletePosition(pointName) {
-		const pos = this.data.positions.get(pointName);
-		this.data.positions.delete(pointName);
-		this.data.emit(constants.events.qlwDir.pos.REM, {pos, qlwDir: this}, `${this.getDirectory().getUri()} removed 1 position ${pointName}`);
+	deletePosition(posName) {
+		const pos = this.data.positions.get(posName);
+		this.data.positions.delete(posName);
+		this.data.emit(constants.events.qlwDir.pos.REM, {pos, posName, qlwDir: this});
 	}
 };

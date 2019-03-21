@@ -27,7 +27,6 @@
   },
   "homepage": "https://github.com/Bob620/xes_converter#readme",
   "dependencies": {
-    "bit-buffer": "^0.2.3",
-    "signal-exit": "^3.0.2"
+    "bit-buffer": "^0.2.3"
   }
 }

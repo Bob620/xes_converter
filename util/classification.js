@@ -9,13 +9,13 @@ module.exports = {
 	syncClassify: (dir, options) => {
 		options.emit = createEmit(options.emitter, dir.getName());
 
-		options.emit(constants.events.classify.exploring.START, {dir, options, sync: true}, 'Exploring directory...');
+		options.emit(constants.events.classify.exploring.START, {dir, options, sync: true});
 		const data = syncExploreDirectory(dir, options);
-		options.emit(constants.events.classify.exploring.END, {dir, options, data, sync: true}, 'Finished exploring directory');
+		options.emit(constants.events.classify.exploring.END, {dir, options, data, sync: true});
 
 		let output = createEmptyOutput();
 
-		options.emit(constants.events.classify.CLASSIFYING, {dir, options, sync: true}, 'Finalizing directory classification...');
+		options.emit(constants.events.classify.CLASSIFYING, {dir, options, sync: true});
 		data.map(({uri, data}) => {
 			if (data.qlw) {
 				output.qlws.set(uri, data.qlw);
@@ -39,19 +39,19 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
-		options.emit(constants.events.classify.CLASSIFIED, {dir, options, output, sync: true}, `${output.totalDirectories} classified with ${output.totalQlwPositions} identified`);
+		options.emit(constants.events.classify.CLASSIFIED, {dir, options, output, sync: true});
 		return output;
 	},
 	classify: async (dir, options) => {
 		options.emit = createEmit(options.emitter, dir.getName());
 
-		options.emit(constants.events.classify.exploring.START, {dir, options, sync: false}, 'Exploring directory...');
+		options.emit(constants.events.classify.exploring.START, {dir, options, sync: false});
 		let data = await Promise.all(exploreDirectory(dir, options));
-		options.emit(constants.events.classify.exploring.END, {dir, options, data, sync: false}, 'Finished exploring directory');
+		options.emit(constants.events.classify.exploring.END, {dir, options, data, sync: false});
 
 		let output = createEmptyOutput();
 
-		options.emit(constants.events.classify.CLASSIFIED, {dir, options, sync: false}, 'Finalizing directory classification...');
+		options.emit(constants.events.classify.CLASSIFIED, {dir, options, sync: false});
 		data.map(({uri, data}) => {
 			if (data.qlw) {
 				output.qlws.set(uri, data.qlw);
@@ -75,7 +75,7 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
-		options.emit(constants.events.classify.CLASSIFIED, {dir, options, output, sync: false}, `${output.totalDirectories} directories classified with ${output.totalQlwPositions} qlw positions identified`);
+		options.emit(constants.events.classify.CLASSIFIED, {dir, options, output, sync: false});
 		return output;
 	},
 	classifySingleDirectory: async (dir, options) => {
@@ -84,7 +84,7 @@ module.exports = {
 		const {uri, data} = await classifyDirectory(dir, options);
 		let output = createEmptyOutput();
 
-		options.emit(constants.events.classify.CLASSIFYING, {dir, options}, 'Finalizing directory classification...');
+		options.emit(constants.events.classify.CLASSIFYING, {dir, options});
 		if (data.qlw) {
 			output.qlws.set(uri, data.qlw);
 			output.totalQlwPositions += data.qlw.totalPositions();
@@ -106,7 +106,7 @@ module.exports = {
 			if (!output.qlws.has(uri) && !output.maps.has(uri))
 				output.totalDirectories++;
 
-		options.emit(constants.events.classify.CLASSIFIED, {dir, options, output}, `${output.totalDirectories} directories classified with ${output.totalQlwPositions} qlw positions identified`);
+		options.emit(constants.events.classify.CLASSIFIED, {dir, options, output});
 		return output;
 	},
 	createEmptyOutput,
@@ -151,7 +151,7 @@ function createEmptyOutput() {
 }
 
 function syncExploreDirectory(directory, options) {
-	options.emit(constants.events.classify.exploring.NEW, {dir: directory, options}, 'New directory found, exploring...');
+	options.emit(constants.events.classify.exploring.NEW, {dir: directory, options});
 	let classifications = [classifyDirectory(directory, options)];
 
 	for (const [, dir] of directory.getDirectories())
@@ -161,7 +161,7 @@ function syncExploreDirectory(directory, options) {
 }
 
 function exploreDirectory(directory, options) {
-	options.emit(constants.events.classify.exploring.NEW, {dir: directory, options}, 'New directory found, exploring...');
+	options.emit(constants.events.classify.exploring.NEW, {dir: directory, options});
 	let promises = [classifyDirectory(directory, options)];
 
 	for (const [, dir] of directory.getDirectories())

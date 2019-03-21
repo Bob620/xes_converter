@@ -17,7 +17,7 @@ module.exports = class {
 			emit: createEmit(options.emitter, directory.getName())
 		};
 
-		this.data.emit(constants.events.qlwPos.NEW, this, `${directory.getUri()}, qlw: ${this.data.qlwFile.name}, cond: ${this.data.dataCondFile.name}`);
+		this.data.emit(constants.events.qlwPos.NEW, this);
 	}
 
 	supportsXes() {
@@ -61,6 +61,6 @@ module.exports = class {
 
 	setXes(xesFile) {
 		this.data.xesFile = xesFile;
-		this.data.emit(constants.events.qlwPos.UPDATE, this, `xes update ${xesFile.name}`);
+		this.data.emit(constants.events.qlwPos.UPDATE, {xesFile, pos: this});
 	}
 };
