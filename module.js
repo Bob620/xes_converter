@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 
 const Directory = require('./structures/directory');
 const Classifier = require('./util/classification');
+const csv = require('./util/csv');
 
 const Processor = require('./processor');
 const conversions = require('./util/conversions');
@@ -87,6 +88,13 @@ class Converter {
 		return options;
 	}
 
+	exportOptionsSanitize(options={}) {
+		options.batchSize = options.batchSize ? options.batchSize : constants.batchSize;
+		options.tempUri = options.tempUri ? options.tempUri : constants.tempUri;
+
+		return options;
+	}
+
 	setWorkingDirectory(uri, options={}) {
 		options = this.transformOptions(options);
 
@@ -119,6 +127,137 @@ class Converter {
 		return classifiedOutput;
 	}
 
+	exportToCsv(options={}, directorySubset=[]) {
+		options = this.exportOptionsSanitize(this.transformOptions(options));
+		const workingUri = this.data.workingDir.getUri();
+		const classifiedDirs = this.data.classifiedWorkingDir.qlws;
+		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
+		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
+
+		let pointSubset = new Map();
+
+		if (directorySubset.length !== 0) {
+			directorySubset = directorySubset.map(subUri => `${workingUri}/${subUri.replace(/\\/giu, '/')}`).filter(uri => {
+				if (classifiedDirs.has(uri))
+					return true;
+				else {
+					const qlwDirName = uri.split('/').slice(0, -1).join('/');
+					if (classifiedDirs.has(qlwDirName)) {
+						let qlwPosDir = pointSubset.get(qlwDirName);
+						if (qlwPosDir) {
+							const pos = qlwPosDir.dir.getPosition(uri);
+							if (pos)
+								qlwPosDir.positions.push(pos);
+						} else {
+							qlwPosDir = {
+								dir: classifiedDirs.get(qlwDirName),
+								positions: []
+							};
+
+							const pos = qlwPosDir.dir.getPosition(uri);
+							if (pos)
+								qlwPosDir.positions.push(pos);
+
+							pointSubset.set(qlwDirName, qlwPosDir);
+						}
+					}
+				}
+			});
+		} else
+			directorySubset = classifiedDirs;
+
+		let failed = 0;
+		let totalPosExported = 0;
+		let batchLength = 0;
+
+		if (options.qlw || options.xes || options.sum) {
+			let itemsToWrite = [];
+			let qlwDirData;
+
+			for (const [uri, qlwDir] of directorySubset) {
+				const positions = qlwDir.getPositions();
+
+				if (positions.size > 0) {
+					qlwDirData = {
+						mapCond: qlwDir.getMapCond(),
+						mapRawCond: qlwDir.getMapRawCond(),
+						positions: []
+					};
+
+					for (const [, pos] of positions) {
+						if (batchLength >= options.batchSize) {
+							itemsToWrite.push(qlwDirData);
+							totalPosExported += batchLength;
+
+							if (options.qlw) {
+								csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${totalPosExported}.csv`, itemsToWrite);
+							}
+
+							if (options.xes) {
+								csv.writeXesToFile(`${outputUri}/${outputName}_xes_${totalPosExported}.csv`, itemsToWrite);
+							}
+
+							if (options.sum) {
+								csv.writeSumToFile(`${outputUri}/${outputName}_sum_${totalPosExported}.csv`, itemsToWrite);
+							}
+
+							batchLength = 0;
+							itemsToWrite = [];
+							qlwDirData.positions = [];
+						}
+
+						let posData = {
+							dataCond: pos.getDataCond()
+						};
+
+						try {
+							if (options.qlw)
+								posData.qlwData = pos.getQlwData();
+							if (options.xes)
+								posData.xesData = pos.getXesData(options);
+							if (options.sum)
+								posData.sumData = pos.getSumData(posData.xesData);
+
+							qlwDirData.positions.push(posData);
+							batchLength++;
+						} catch(err) {
+							console.log(err);
+
+							console.log(`ERROR  |  Skipping ${pos.getDirectory().getUri()}\n`);
+							failed++;
+						}
+					}
+
+					if (qlwDirData.positions.length > 0)
+						itemsToWrite.push(qlwDirData);
+				}
+			}
+
+			if (qlwDirData && qlwDirData.positions.length > 0) {
+				itemsToWrite.push(qlwDirData);
+				totalPosExported += batchLength;
+
+				if (options.qlw) {
+					csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${totalPosExported}.csv`, itemsToWrite);
+				}
+
+				if (options.xes) {
+					csv.writeXesToFile(`${outputUri}/${outputName}_xes_${totalPosExported}.csv`, itemsToWrite);
+				}
+
+				if (options.sum) {
+					csv.writeSumToFile(`${outputUri}/${outputName}_sum_${totalPosExported}.csv`, itemsToWrite);
+				}
+			}
+		}
+
+		return {
+			totalPosExported,
+			failed,
+			outputUri,
+			outputName
+		}
+	}
 }
 
 const converter = new Converter({
@@ -156,8 +295,13 @@ converter.data.workingDir.syncUpdate();
 converter.classifyWorkingDirectory({xes: true, qlw: true, sum: true, map: true});
 
 asyncConverter.setWorkingDirectory('/home/mia/Downloads/Anette/').then(() => {
+	let test = converter.exportToCsv({qlw: true, xes: true, sum: true, outputName: 'sync'}, []);
+//	let test = converter.exportToCsv({qlw: true, xes: true, sum: true, outputName: 'sync'}, ['2018-04-12_JS300N_Nitrogen\\2018-04-12_JS300_Nitrogen\\2018-04-12_JS300_Nitrogen_0002_QLW\\Pos_0001', 'kappa']);
+	let test1 = asyncConverter.exportToCsv({qlw: true, xes: true, sum: true, outputName: 'async'}, []);
 	console.log(`ASYNC:    ${asyncConverter.data.workingDir.totalSubDirectories()} total directories explored, ${asyncConverter.data.classifiedWorkingDir.totalDirectories} directories classified with ${asyncConverter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
+	console.log(`ASYNC:    ${test1.totalPosExported} positions exported with ${test1.failed} failing to be read to ${test1.outputUri}`);
 	console.log(` SYNC:    ${converter.data.workingDir.totalSubDirectories()} total directories explored, ${converter.data.classifiedWorkingDir.totalDirectories} directories classified with ${converter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
+	console.log(` SYNC:    ${test.totalPosExported} positions exported with ${test.failed} failing to be read to ${test.outputUri}`);
 });
 
 /*
