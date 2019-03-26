@@ -77,6 +77,19 @@
     "qlwPos": {
       "NEW": "qlwPos.new",
       "UPDATE": "qlwPos.update"
+    },
+    "export": {
+      "qlw": {
+        "START": "export.qlw.start",
+        "READY": "export.qlw.ready",
+        "NEW": "export.qlw.new",
+        "POSFAIL": "export.qlw.posFail",
+        "END": "export.qlw.end"
+      },
+      "map": {
+        "NEW": "export.map.new",
+        "ERROR": "export.map.error"
+      }
     }
   },
   "metadata": [

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const util = require('util');
 
 const constants = require('./constants');
 const metadata = require('./metadata');
@@ -20,8 +21,15 @@ module.exports = {
         const metaLines = lines.length;
 
         // Currently output 2 points less than the qlw array length
-        for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
-            lines.push([i]);
+        const qlwLength = constants.qlw.arrayLength - 2;
+        const lengthFactor = 8;
+        const qlwModLength = Math.floor(qlwLength/lengthFactor);
+
+        for (let i = 0; i < qlwModLength*lengthFactor; i += lengthFactor)
+            lines.push([i], [i+1], [i+2], [i+3], [i+4], [i+5], [i+6], [i+7]);
+
+        for (let i = 0; i < qlwLength%lengthFactor; i++)
+            lines.push([qlwModLength*lengthFactor + i]);
 
         // Iterate over the items
         for (const {mapCond, mapRawCond, positions} of items)
@@ -38,7 +46,14 @@ module.exports = {
             }
 
         // Write out everything all at once
-        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));
+        return new Promise((resolve, reject) => {
+            fs.writeFile(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'), err => {
+                if (err)
+                    reject(err);
+                else
+                    resolve();
+            });
+        });
     },
     writeXesToFile: (fileUri, items) => {
         let lines = [];
@@ -87,7 +102,14 @@ module.exports = {
         }
 
         // Write out everything all at once
-        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));
+        return new Promise((resolve, reject) => {
+            fs.writeFile(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'), err => {
+                if (err)
+                    reject(err);
+                else
+                    resolve();
+            });
+        });
     },
     writeSumToFile: (fileUri, items) => {
         let lines = [];
@@ -123,6 +145,13 @@ module.exports = {
             }
 
         // Write out everything all at once
-        fs.writeFileSync(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'));
+        return new Promise((resolve, reject) => {
+            fs.writeFile(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'), err => {
+                if (err)
+                    reject(err);
+                else
+                    resolve();
+            });
+        });
     }
 };
