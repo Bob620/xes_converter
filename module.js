@@ -215,7 +215,7 @@ class Converter {
 			}
 		}
 
-		emit(constants.events.export.qlw.END, {
+		emit(constants.events.export.qlw.DONE, {
 			totalPosExported,
 			failed,
 			outputUri,

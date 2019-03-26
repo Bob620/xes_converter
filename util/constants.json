@@ -64,7 +64,7 @@
       "exploring": {
         "START": "classify.exploring.start",
         "NEW": "classify.exploring.new",
-        "END": "classify.exploring.end"
+        "DONE": "classify.exploring.end"
       }
     },
     "qlwDir": {
@@ -84,7 +84,7 @@
         "READY": "export.qlw.ready",
         "NEW": "export.qlw.new",
         "POSFAIL": "export.qlw.posFail",
-        "END": "export.qlw.end"
+        "DONE": "export.qlw.done"
       },
       "map": {
         "NEW": "export.map.new",
