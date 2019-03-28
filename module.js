@@ -20,7 +20,7 @@ class Converter {
 			emitter: new EventEmitter()
 		};
 
-		this.data.autoClassifyOptions = this.transformOptions(options.autoClassifyOptions);
+		this.data.autoClassifyOptions = options.autoClassifyOptions ? this.transformOptions(options.autoClassifyOptions) : false;
 		this.data.emitter.on('message', this.onEmit.bind(this));
 	}
 
@@ -52,6 +52,8 @@ class Converter {
 				return this.data.workingDir.update();
 			else
 				return this.data.workingDir.syncUpdate();
+
+		return this.data.workingDir;
 	}
 
 	classifyWorkingDirectory(options={}) {
@@ -190,8 +192,7 @@ class Converter {
 				}
 			}
 
-			if (qlwDirData && qlwDirData.positions.length > 0) {
-				itemsToWrite.push(qlwDirData);
+			if (itemsToWrite.length !== 0) {
 				totalPosExported += batchLength;
 
 				let writingPromises = [];
@@ -288,16 +289,22 @@ class Converter {
 			case constants.events.qlwPos.UPDATE:
 				console.log(`${type}  |  xes update ${data.xesFile.name}`);
 				break;
+			case constants.events.export.qlw.READY:
+				console.log(`${type}  |  Due to uneven binning sizes, position order may be changed.`);
+				break;
 			case constants.events.export.qlw.NEW:
 				console.log(`${type}  |  Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor((data.totalExported/data.totalPositions)*100)}%`);
 				break;
 			case constants.events.export.qlw.POSFAIL:
-				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}\\n`);
+				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);
 				break;
 		}
 	}
 }
 
+module.exports = Converter;
+
+/*
 const converter = new Converter({
 	async: false
 });

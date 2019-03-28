@@ -1,9 +1,6 @@
 const constants = require('./constants');
 const packageJson = require('../package');
 
-const Logger = require('../util/logger');
-const debugLog = Logger.log.bind(Logger, constants.logger.names.debugLog);
-
 module.exports = (mapCond, mapRawCond, dataCond) => {
 	// Metadata that needs to be computed, goes into extra
 	const binsY = mapRawCond.get('ccd_parameter').get('ccd_size_y')/mapRawCond.get('ccd_parameter').get('binning_param_y') + 1;
@@ -25,7 +22,7 @@ module.exports = (mapCond, mapRawCond, dataCond) => {
 		stageZ
 	};
 
-	debugLog(`Extra: ${coef}, ${binsX} x ${binsY}, ${stageX} x ${stageY} x ${stageZ}`);
+//	debugLog(`Extra: ${coef}, ${binsX} x ${binsY}, ${stageX} x ${stageY} x ${stageZ}`);
 
 	let lines = [];
 	let data = '';

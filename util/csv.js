@@ -79,10 +79,7 @@ module.exports = {
             return b[0] - a[0];
         });
 
-        if (posByLength[0][0] !== posByLength[0][0])
-            log('\n\tDue to uneven binning sizes, position order in csv may be out of alphabetical order.\n');
-
-        // y + 1 sets of data and another y + 1 sets of noise based on the ccd camera size
+        // y + 1 sets of data and another y + 1 sets of background based on the ccd camera size
         for (let i = 0; i < posByLength[0][0] * posByLength[0][1] * 2; i++)
             lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 
@@ -122,7 +119,7 @@ module.exports = {
 
         const metaLines = lines.length;
 
-        // One set for data, one for noise
+        // One set for data, one for background
         for (let i = 0; i < items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x') * 2; i++)
             lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 

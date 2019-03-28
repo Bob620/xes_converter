@@ -7,7 +7,7 @@ const Logger = require('./logger');
 const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
 const conversions = {
-	xesObjectToSum: (xes) => {
+	xesObjectToSum: xes => {
 		let output = {
 			data: [],
 			background: []
@@ -135,26 +135,21 @@ const conversions = {
 
 		return positionData;
 	},
-	qlwFileToObject: (fileUri) => {
+	qlwFileToObject: fileUri => {
 		// Qlw files are by default always 4096 points, if something changes this is the place
-
-		if (!fileUri)
-			throw {
-				message: 'No file uri given to read qlw file',
-				code: 3
-			};
-
 		let probeData = [];
 
-		// Grab the qlw file as a buffer
-		const qlwBytes = fs.readFileSync(fileUri, {encoding: null}).buffer;
+		if (fileUri) {
+			// Grab the qlw file as a buffer
+			const qlwBytes = fs.readFileSync(fileUri, {encoding: null}).buffer;
 
-		// For some reason it only gives me 4095 points, and even then the first one is garbage, can keep or remove it here
-		const qlwData = new BitView(qlwBytes, constants.qlw.dataByteOffset, (constants.qlw.arrayLength - 1) * 8);
+			// For some reason it only gives me 4095 points, and even then the first one is garbage, can keep or remove it here
+			const qlwData = new BitView(qlwBytes, constants.qlw.dataByteOffset, (constants.qlw.arrayLength - 1) * 8);
 
-		// Iterates through the 4096 points, but subtracts 2 for the first and last points to be skipped
-		for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
-			probeData.push(qlwData.getFloat64((64 * i) + 32)); // Measured in bits
+			// Iterates through the 4096 points, but subtracts 2 for the first and last points to be skipped
+			for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
+				probeData.push(qlwData.getFloat64((64 * i) + 32)); // Measured in bits
+		}
 
 		return probeData;
 	},

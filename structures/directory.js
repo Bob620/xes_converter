@@ -13,6 +13,8 @@ class Directory {
 	constructor(uri, options={}) {
 		let uriName = uri.split('\\');
 		uriName = uriName[uriName.length-1].split('/');
+		if (uriName[uriName.length-1] === '')
+			uriName.pop();
 
 		this.data = {
 			name: options.name ? options.name : uriName[uriName.length-1],
