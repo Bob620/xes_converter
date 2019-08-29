@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-const Processor = require('./processor');
+const Converter = require('./module');
 const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
@@ -226,41 +226,15 @@ else {
 	if (!options.topDirectoryUri)
 		log('Please enter a uri of a directory to process, use with no options or -h for help');
 	else {
-		// try to process using options given
 		try {
-			Processor(options).then(() => {
-				const readline = require('readline');
+			const converter = new Converter();
 
-				const rl = readline.createInterface({
-					input: process.stdin,
-					output: process.stdout
-				});
+			converter.setWorkingDirectory(options.topDirectoryUri);
+			converter.classifyWorkingDirectory(options);
 
-				rl.question('\n\nDo you want to save this log [y/n]: ', answer => {
-					if (answer[0] === 'y') {
-						let log = Logger.getLog(constants.logger.names.defaultLog).log;
-
-						rl.question('Do you want to include the debug log [y/n]: ', answer => {
-							if (answer[0] === 'y')
-								log = log.concat(Logger.getLog(constants.logger.names.debugLog).log);
-
-							log.sort(([timeA], [timeB]) => timeA - timeB);
-
-							const fs = require('fs');
-
-							// Screw Windows new lines
-							fs.writeFileSync(`${options.outputDirectoryUri ? options.outputDirectoryUri : options.topDirectoryUri}/xes_converter_log.txt`, log.map(([time, line]) => `[${time}] ${line.replace(/\n/gi, '\r\n')}`).join('\r\n'));
-							console.log('Log written to file');
-
-							rl.close();
-							process.exit(0);
-						});
-					} else {
-						rl.close();
-						process.exit(0);
-					}
-				});
-			});
+			converter.exportQlwToCsv(options).then(data => {
+				console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+			}).catch(console.log);
 		} catch (err) {
 			console.log(err);
 			debugLog(err.message);

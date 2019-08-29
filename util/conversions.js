@@ -13,8 +13,8 @@ const conversions = {
 			background: []
 		};
 
-		const binsY = xes.data.length;
-		const binXLength = xes.data[0].length;
+		const binsY = xes.bins;
+		const binXLength = xes.poses;
 
 		// Sum all the data and noise
 		for (let i = 0; i < binXLength; i++) {
@@ -25,8 +25,8 @@ const conversions = {
 					output.background[i] = 0; // set the initial value to 0 (otherwise NaN)
 
 				// Sum data
-				output.data[i] += xes.data[k][i];
-				output.background[i] += xes.background[k][i];
+				output.data[i] += xes.getDataAt(k, i);
+				output.background[i] += xes.getBackgroundAt(k, i);
 			}
 		}
 
@@ -38,11 +38,6 @@ const conversions = {
 				message: 'No file uri given to read xes file',
 				code: 3
 			};
-
-		let positionData = {
-			data: [],
-			background: []
-		};
 
 		// Grab the entire file as a buffer
 		const xesBytes = fs.readFileSync(fileUri, {encoding: null}).buffer;
@@ -84,9 +79,11 @@ const conversions = {
         // Doesn't start at 0, some basic metadata and blank space covered by the header
 		const xesData = new BitView(xesBytes, constants.xes.dataByteOffset, TotalBinByteLength);
 
+		let xesBackground;
+
 		if (readBackground) {
 			// 2 byte offset on each end and some metadata at the start
-			const xesBackground = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset);
+			xesBackground = new BitView(xesBytes, TotalBinByteLength + constants.xes.noiseByteOffset, xesBytes.byteLength - (TotalBinByteLength) - constants.xes.noiseByteEndOffset);
 
 			// Make sure we have the right position for noise by checking against metadata (noise is always the same length)
 			if (xesBackground.getUint32(constants.xes.noiseCheckOffset) - 1 !== binXLength)
@@ -94,46 +91,14 @@ const conversions = {
 					message: 'xes file incorrectly identified, read, or created? (Invalid bin length)',
 					code: 2
 				};
-
-			// Grab all the background data
-			try {
-				for (let i = 0; i < binsY; i++) {
-					let probeBackground = [];
-					for (let k = 0; k < binXLength; k++)
-						probeBackground.push(xesBackground.getUint32((BinByteLength * 8 * i) + (32 * k) + constants.xes.noiseDataOffset)); // Measured in bits
-					positionData.background.push(probeBackground);
-				}
-			} catch(err) {
-				throw {
-					message: 'xes file incorrectly identified, read, or created? (Unknown error)',
-					code: 6
-				};
-			}
 		}
 
-		// Grab all the position data
-		if (readBackground)
-			for (let i = 0; i < binsY; i++) {
-				let probeData = [];
-				for (let k = 0; k < binXLength; k++)
-					probeData.push(xesData.getUint32((BinByteLength * 8 * i) + (32 * k))); // Measured in bits
-				positionData.data.push(probeData);
-			}
-		else { // Fill background with 0 in case of not being able to read it
-			for (let i = 0; i < binsY; i++) {
-				let probeData = [];
-				let probeBackground = [];
-				for (let k = 0; k < binXLength; k++) {
-					probeData.push(xesData.getUint32((BinByteLength * 8 * i) + (32 * k))); // Measured in bits
-					probeBackground.push(0);
-				}
-				positionData.data.push(probeData);
-				positionData.background.push(probeBackground);
-			}
-			log('Recovery of data successful.\n');
-		}
-
-		return positionData;
+		return {
+			getDataAt: (bin, pos) => xesData.getUint32((BinByteLength * 8 * bin) + (32 * pos)),
+			bins: binsY,
+			poses: binXLength,
+			getBackgroundAt: (bin, pos) => xesBackground ? xesBackground.getUint32((BinByteLength * 8 * bin) + (32 * pos) + constants.xes.noiseDataOffset) : 0,
+		};
 	},
 	qlwFileToObject: fileUri => {
 		// Qlw files are by default always 4096 points, if something changes this is the place
@@ -144,14 +109,17 @@ const conversions = {
 			const qlwBytes = fs.readFileSync(fileUri, {encoding: null}).buffer;
 
 			// For some reason it only gives me 4095 points, and even then the first one is garbage, can keep or remove it here
-			const qlwData = new BitView(qlwBytes, constants.qlw.dataByteOffset, (constants.qlw.arrayLength - 1) * 8);
+			const length = constants.qlw.arrayLength - 1;
+			const qlwData = new BitView(qlwBytes, constants.qlw.dataByteOffset, length * 8);
 
-			// Iterates through the 4096 points, but subtracts 2 for the first and last points to be skipped
-			for (let i = 0; i < constants.qlw.arrayLength - 2; i++)
-				probeData.push(qlwData.getFloat64((64 * i) + 32)); // Measured in bits
+			// All iteration through the 4096 points, but subtracts 2 for the first and last points to be skipped
+			return {
+				length: length - 1,
+				getValueAt: pos => qlwData.getFloat64((64 * pos) + 32)
+			};
 		}
 
-		return probeData;
+		return false;
 	},
 	lineFileToObject: () => {
 

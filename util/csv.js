@@ -1,11 +1,11 @@
 const fs = require('fs');
-const util = require('util');
+//const util = require('util');
 
 const constants = require('./constants');
 const metadata = require('./metadata');
 
-const Logger = require('./logger');
-const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
+//const Logger = require('./logger');
+//const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
 module.exports = {
     writeQlwToFile: (fileUri, items) => {
@@ -20,8 +20,7 @@ module.exports = {
 
         const metaLines = lines.length;
 
-        // Currently output 2 points less than the qlw array length
-        const qlwLength = constants.qlw.arrayLength - 2;
+        const qlwLength = items[0].positions[0].qlwData.length;
         const lengthFactor = 8;
         const qlwModLength = Math.floor(qlwLength/lengthFactor);
 
@@ -41,18 +40,25 @@ module.exports = {
                     lines[i].push(meta[i]);
 
                 // Append the data to the array (easiest way to work with csv atm)
-                for (let i = 0; i < qlwData.length; i++) // Position iteration
-                    lines[i + metaLines].push(qlwData[i]);
+                for (let i = 0; i < qlwLength; i++) // Position iteration
+                    lines[i + metaLines].push(qlwData.getValueAt(i));
             }
 
         // Write out everything all at once
-        return new Promise((resolve, reject) => {
-            fs.writeFile(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'), err => {
-                if (err)
-                    reject(err);
-                else
-                    resolve();
-            });
+        return new Promise(async resolve => {
+            const stream = fs.createWriteStream(fileUri, 'utf8');
+
+            while (lines.length > 0) {
+                await new Promise(resolve => {
+                    if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
+                        stream.once('drain', resolve);
+                    else
+                        process.nextTick(resolve);
+                });
+            }
+
+            stream.close();
+            resolve();
         });
     },
     writeXesToFile: (fileUri, items) => {
@@ -73,7 +79,7 @@ module.exports = {
 
         for (const item of items)
             for (const position of item.positions)
-                posByLength.push([position.xesData.data.length, position.xesData.data[0].length, position, item]);
+                posByLength.push([position.xesData.bins, position.xesData.poses, position, item]);
 
         posByLength.sort((a, b) => {
             return b[0] - a[0];
@@ -93,19 +99,26 @@ module.exports = {
             // Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
             for (let i = 0; i < yBins; i++) // Bin iteration
                 for (let k = 0; k < xBins; k++) { // Position iteration
-                    lines[(i * xBins) + k + metaLines].push(xesData.data[i][k]);
-                    lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.background[i][k]);
+                    lines[(i * xBins) + k + metaLines].push(xesData.getDataAt(i, k));
+                    lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.getBackgroundAt(i, k));
                 }
         }
 
         // Write out everything all at once
-        return new Promise((resolve, reject) => {
-            fs.writeFile(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'), err => {
-                if (err)
-                    reject(err);
-                else
-                    resolve();
-            });
+        return new Promise(async resolve => {
+            const stream = fs.createWriteStream(fileUri, 'utf8');
+
+            while (lines.length > 0) {
+                await new Promise(resolve => {
+                    if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
+                        stream.once('drain', resolve);
+                    else
+                        process.nextTick(resolve);
+                });
+            }
+
+            stream.close();
+            resolve();
         });
     },
     writeSumToFile: (fileUri, items) => {
@@ -142,13 +155,20 @@ module.exports = {
             }
 
         // Write out everything all at once
-        return new Promise((resolve, reject) => {
-            fs.writeFile(fileUri, lines.map(line => line.map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',')).join('\n'), err => {
-                if (err)
-                    reject(err);
-                else
-                    resolve();
-            });
+        return new Promise(async resolve => {
+            const stream = fs.createWriteStream(fileUri, 'utf8');
+
+            while (lines.length > 0) {
+                await new Promise(resolve => {
+                    if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
+                        stream.once('drain', resolve);
+                    else
+                        process.nextTick(resolve);
+                });
+            }
+
+            stream.close();
+            resolve();
         });
     }
 };

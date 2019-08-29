@@ -42,17 +42,12 @@ module.exports = class {
 		if (this.data.xesFile || this.data.xesFile === 'undefined')
 			return conversions.xesFileToObject(`${this.data.directory.getUri()}/${this.data.xesFile.name}`, options);
 
-		let output = {
-			data: [[]],
-			background: [[]]
+		return {
+			getDataAt: 0,
+			bins: 0,
+			poses: 0,
+			getBackgroundAt: 0,
 		};
-
-		for (let i = 0; i < 2048; i++) {
-			output.data[0].push(0);
-			output.background[0].push(0);
-		}
-
-		return output;
 	}
 
 	getSumData(xesObject) {

@@ -293,7 +293,7 @@ class Converter {
 				console.log(`${type}  |  Due to uneven binning sizes, position order may be changed.`);
 				break;
 			case constants.events.export.qlw.NEW:
-				console.log(`${type}  |  Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor((data.totalExported/data.totalPositions)*100)}%`);
+				console.log(`${type}  |  Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions})`);
 				break;
 			case constants.events.export.qlw.POSFAIL:
 				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);
