@@ -35,8 +35,15 @@ function help() {
 	log('-h, --help                       \tProvides this text');
 	log('-o [uri], --output [uri]         \tOutput directory uri');
 	log('-e [method], --method [method]   \tOutput methodology');
+	log(`-f [format], --format [format]   \tSpecifies format to export to, default: ${constants.export.types.DEFAULT}`);
 	log(`-b [number], --batchsize [number]\tThe number of positions per output file, default: ${constants.batchSize}`);
 	log();
+	log('Export Format Options:');
+	log('d, default \tExport all positions as csv files');
+	log('c, csv     \tExport all positions as csv files');
+	log('j, json    \tExport all positions as a json file');
+	log('To output as multiple formats, just prefix with ~ and use single character (eg. -f ~jc)');
+	log('');
 	log('Output Methodologies:');
 	log('d, default    \tOutput all positions in files named for the directory this command is called on');
 	log('e, experiment \tOutput all positions in files named after the experiment\'s directory name');
@@ -59,6 +66,7 @@ let options = {
 	loose: false,
 	debug: false,
 	outputMethod: {type: 'default', data: ''},
+	exportTypes: []
 };
 
 for (let i = 2; i < process.argv.length; i++) {
@@ -128,6 +136,40 @@ for (let i = 2; i < process.argv.length; i++) {
 						break;
 				}
 				break;
+			case '--format':
+				const next = process.argv[++i];
+				if (next.startsWith('~'))
+					next.split('').map(char => {
+						switch (char) {
+							case 'd':
+							default:
+								options.exportTypes.push(constants.export.types.DEFAULT);
+								break;
+							case 'c':
+								options.exportTypes.push(constants.export.types.CSV);
+								break;
+							case 'j':
+								options.exportTypes.push(constants.export.types.JSON);
+								break;
+						}
+					});
+				else
+					switch (next) {
+						case 'd':
+						case 'default':
+						default:
+							options.exportTypes.push(constants.export.types.DEFAULT);
+							break;
+						case 'c':
+						case 'csv':
+							options.exportTypes.push(constants.export.types.CSV);
+							break;
+						case 'j':
+						case 'json':
+							options.exportTypes.push(constants.export.types.JSON);
+							break;
+					}
+				break;
 		}
 	} else if (process.argv[i].startsWith('-')) {
 		switch (process.argv[i]) {
@@ -153,6 +195,39 @@ for (let i = 2; i < process.argv.length; i++) {
 						options.outputMethod.data = process.argv[++i];
 						break;
 				}
+				break;
+			case '-f':
+				const next = process.argv[++i];
+				if (next.startsWith('~'))
+					next.split('').map(char => {
+						switch (char) {
+							case 'd':
+								options.exportTypes.push(constants.export.types.DEFAULT);
+								break;
+							case 'c':
+								options.exportTypes.push(constants.export.types.CSV);
+								break;
+							case 'j':
+								options.exportTypes.push(constants.export.types.JSON);
+								break;
+						}
+					});
+				else
+					switch (next) {
+						case 'd':
+						case 'default':
+						default:
+							options.exportTypes.push(constants.export.types.DEFAULT);
+							break;
+						case 'c':
+						case 'csv':
+							options.exportTypes.push(constants.export.types.CSV);
+							break;
+						case 'j':
+						case 'json':
+							options.exportTypes.push(constants.export.types.JSON);
+							break;
+					}
 				break;
 			default:
 				for (const char of process.argv[i])
@@ -232,9 +307,15 @@ else {
 			converter.setWorkingDirectory(options.topDirectoryUri);
 			converter.classifyWorkingDirectory(options);
 
-			converter.exportQlwToCsv(options).then(data => {
-				console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
-			}).catch(console.log);
+			if (options.exportTypes.includes(constants.export.types.CSV))
+				converter.exportQlwToCsv(options).then(data => {
+					console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+				}).catch(console.log);
+
+			if (options.exportTypes.includes(constants.export.types.JSON))
+				converter.exportQlwToJson(options).then(data => {
+					console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+				}).catch(console.log);
 		} catch (err) {
 			console.log(err);
 			debugLog(err.message);

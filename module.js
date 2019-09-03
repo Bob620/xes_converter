@@ -3,6 +3,7 @@ const EventEmitter = require('events');
 const Directory = require('./structures/directory');
 const Classifier = require('./util/classification');
 const csv = require('./util/csv');
+const json = require('./util/json');
 const createEmit = require('./util/emitter');
 
 const Processor = require('./processor');
@@ -69,6 +70,144 @@ class Converter {
 
 		this.data.classifiedWorkingDir = classifiedOutput;
 		return classifiedOutput;
+	}
+
+	async exportQlwToJson(options={}, directorySubset=[]) {
+		const emit = createEmit.createEmit(this.data.emitter, '');
+
+		emit(constants.events.export.qlw.START);
+		options = this.exportOptionsSanitize(this.transformOptions(options));
+		const workingUri = this.data.workingDir.getUri();
+		const classifiedDirs = this.data.classifiedWorkingDir.qlws;
+		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
+		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
+
+		let pointSubset = new Map();
+
+		if (directorySubset.length !== 0) {
+			directorySubset = directorySubset.map(subUri => `${workingUri}/${subUri.replace(/\\/giu, '/')}`).filter(uri => {
+				if (classifiedDirs.has(uri))
+					return true;
+				else {
+					const qlwDirName = uri.split('/').slice(0, -1).join('/');
+					if (classifiedDirs.has(qlwDirName)) {
+						let qlwPosDir = pointSubset.get(qlwDirName);
+						if (qlwPosDir) {
+							const pos = qlwPosDir.dir.getPosition(uri);
+							if (pos)
+								qlwPosDir.positions.push(pos);
+						} else {
+							qlwPosDir = {
+								dir: classifiedDirs.get(qlwDirName),
+								positions: []
+							};
+
+							const pos = qlwPosDir.dir.getPosition(uri);
+							if (pos)
+								qlwPosDir.positions.push(pos);
+
+							pointSubset.set(qlwDirName, qlwPosDir);
+						}
+					}
+				}
+			});
+		} else
+			directorySubset = classifiedDirs;
+
+		emit(constants.events.export.qlw.READY, {directorySubset});
+
+		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+		let failed = 0;
+		let totalPosExported = 0;
+		let batchLength = 0;
+
+		if (options.qlw || options.xes || options.sum) {
+			let itemsToWrite = [];
+			let qlwDirData;
+
+			for (const [uri, qlwDir] of directorySubset) {
+				const positions = qlwDir.getPositions();
+
+				if (positions.size > 0) {
+					qlwDirData = {
+						mapCond: qlwDir.getMapCond(),
+						mapRawCond: qlwDir.getMapRawCond(),
+						positions: []
+					};
+
+					for (const [, pos] of positions) {
+						if (batchLength >= options.batchSize) {
+							itemsToWrite.push(qlwDirData);
+							totalPosExported += batchLength;
+
+							await json.writeToFile(`${outputUri}/${outputName}_${totalPosExported}.json`, itemsToWrite);
+							emit(constants.events.export.qlw.NEW,
+								{
+									batchLength,
+									totalPositions,
+									failed,
+									totalExported: totalPosExported
+								}
+							);
+
+							batchLength = 0;
+							itemsToWrite = [];
+							qlwDirData.positions = [];
+						}
+
+						let posData = {
+							dataCond: pos.getDataCond()
+						};
+
+						try {
+							if (options.qlw)
+								posData.qlwData = pos.getQlwData();
+							if (options.xes)
+								posData.xesData = pos.getXesData(options);
+							if (options.sum)
+								posData.sumData = pos.getSumData(posData.xesData);
+
+							qlwDirData.positions.push(posData);
+							batchLength++;
+						} catch (err) {
+							console.log(err);
+
+							emit(constants.events.export.qlw.POSFAIL, {position: pos, err});
+							failed++;
+						}
+					}
+
+					if (qlwDirData.positions.length > 0)
+						itemsToWrite.push(qlwDirData);
+				}
+			}
+
+			if (itemsToWrite.length !== 0) {
+				totalPosExported += batchLength;
+
+				await json.writeToFile(`${outputUri}/${outputName}_${totalPosExported}.json`, itemsToWrite);
+				emit(constants.events.export.qlw.NEW, {
+					batchLength,
+					totalPositions,
+					failed,
+					totalExported: totalPosExported
+				});
+			}
+		}
+
+		emit(constants.events.export.qlw.DONE, {
+			totalPosExported,
+			failed,
+			outputUri,
+			outputName
+		});
+
+		return {
+			totalPosExported,
+			failed,
+			outputUri,
+			outputName
+		}
 	}
 
 	async exportQlwToCsv(options={}, directorySubset=[]) {

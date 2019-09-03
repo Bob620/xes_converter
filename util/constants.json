@@ -49,6 +49,13 @@
       }
     }
   },
+  "export": {
+    "types": {
+      "CSV": "csv",
+      "JSON": "json",
+      "DEFAULT": "csv"
+    }
+  },
   "events": {
     "directory": {
       "NEWDIR": "directory.newDir",
