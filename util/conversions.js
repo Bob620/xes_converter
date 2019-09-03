@@ -98,12 +98,24 @@ const conversions = {
 			bins: binsY,
 			poses: binXLength,
 			getBackgroundAt: (bin, pos) => xesBackground ? xesBackground.getUint32((BinByteLength * 8 * bin) + (32 * pos) + constants.xes.noiseDataOffset) : 0,
+			serialize: () => {
+				let points = [];
+				let background = [];
+				for (let k = 0; k < binsY; k++)
+					if (xesBackground)
+						for (let i = 0; i < binXLength; i++) {
+							points.push(xesData.getUint32((BinByteLength * 8 * k) + (32 * i)));
+							background.push(xesBackground.getUint32((BinByteLength * 8 * k) + (32 * i) + constants.xes.noiseDataOffset));
+						}
+					else
+						for (let i = 0; i < binXLength; i++)
+							points.push(xesData.getUint32((BinByteLength * 8 * k) + (32 * i)));
+				return {data: points, background};
+			}
 		};
 	},
 	qlwFileToObject: fileUri => {
 		// Qlw files are by default always 4096 points, if something changes this is the place
-		let probeData = [];
-
 		if (fileUri) {
 			// Grab the qlw file as a buffer
 			const qlwBytes = fs.readFileSync(fileUri, {encoding: null}).buffer;
@@ -115,7 +127,13 @@ const conversions = {
 			// All iteration through the 4096 points, but subtracts 2 for the first and last points to be skipped
 			return {
 				length: length - 1,
-				getValueAt: pos => qlwData.getFloat64((64 * pos) + 32)
+				getValueAt: pos => qlwData.getFloat64((64 * pos) + 32),
+				serialize: () => {
+					let points = [];
+					for (let i = 0; i < length - 1; i++)
+						points.push(qlwData.getFloat64((64 * i) + 32));
+					return {data: points};
+				}
 			};
 		}
 

@@ -47,6 +47,7 @@ module.exports = class {
 			bins: 0,
 			poses: 0,
 			getBackgroundAt: 0,
+			serialize: {data: []}
 		};
 	}
 
