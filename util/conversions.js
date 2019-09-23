@@ -111,7 +111,9 @@ const conversions = {
 						for (let i = 0; i < binXLength; i++)
 							points.push(xesData.getUint32((BinByteLength * 8 * k) + (32 * i)));
 				return {data: points, background};
-			}
+			},
+			rawBackground: xesBackground ? xesBackground._view : new Uint8Array(),
+			rawData: xesData._view
 		};
 	},
 	qlwFileToObject: fileUri => {
@@ -133,7 +135,8 @@ const conversions = {
 					for (let i = 0; i < length - 1; i++)
 						points.push(qlwData.getFloat64((64 * i) + 32));
 					return {data: points};
-				}
+				},
+				rawData: qlwData
 			};
 		}
 

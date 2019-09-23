@@ -53,7 +53,8 @@
     "types": {
       "CSV": "csv",
       "JSON": "json",
-      "DEFAULT": "csv"
+      "DEFAULT": "csv",
+      "PLZIP": "plzip"
     }
   },
   "events": {

@@ -42,6 +42,7 @@ function help() {
 	log('d, default \tExport all positions as csv files');
 	log('c, csv     \tExport all positions as csv files');
 	log('j, json    \tExport all positions as a json file');
+	log('z, zip     \tExport all positions as a plzip file');
 	log('To output as multiple formats, just prefix with ~ and use single character (eg. -f ~jc)');
 	log('');
 	log('Output Methodologies:');
@@ -168,6 +169,10 @@ for (let i = 2; i < process.argv.length; i++) {
 						case 'json':
 							options.exportTypes.push(constants.export.types.JSON);
 							break;
+						case 'z':
+						case 'zip':
+							options.exportTypes.push(constants.export.types.PLZIP);
+							break;
 					}
 				break;
 		}
@@ -226,6 +231,10 @@ for (let i = 2; i < process.argv.length; i++) {
 						case 'j':
 						case 'json':
 							options.exportTypes.push(constants.export.types.JSON);
+							break;
+						case 'z':
+						case 'zip':
+							options.exportTypes.push(constants.export.types.PLZIP);
 							break;
 					}
 				break;
@@ -306,6 +315,11 @@ else {
 
 			converter.setWorkingDirectory(options.topDirectoryUri);
 			converter.classifyWorkingDirectory(options);
+
+			if (options.exportTypes.includes(constants.export.types.PLZIP))
+				converter.exportQlwToPLZip(options).then(data => {
+					console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+				}).catch(console.log);
 
 			if (options.exportTypes.includes(constants.export.types.CSV))
 				converter.exportQlwToCsv(options).then(data => {
