@@ -136,7 +136,7 @@ const conversions = {
 						points.push(qlwData.getFloat64((64 * i) + 32));
 					return {data: points};
 				},
-				rawData: qlwData
+				rawData: qlwData._view
 			};
 		}
 

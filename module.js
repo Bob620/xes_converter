@@ -485,18 +485,8 @@ class Converter {
 			if (itemsToWrite.length !== 0) {
 				totalPosExported += batchLength;
 
-				let writingPromises = [];
+				await plZip.writeToZip(outputUri, outputName, itemsToWrite);
 
-				if (options.qlw)
-					writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${totalPosExported}.csv`, itemsToWrite));
-
-				if (options.xes)
-					writingPromises.push(csv.writeXesToFile(`${outputUri}/${outputName}_xes_${totalPosExported}.csv`, itemsToWrite));
-
-				if (options.sum)
-					writingPromises.push(csv.writeSumToFile(`${outputUri}/${outputName}_sum_${totalPosExported}.csv`, itemsToWrite));
-
-				await Promise.all(writingPromises);
 				emit(constants.events.export.qlw.NEW, {
 					batchLength,
 					totalPositions,
@@ -583,7 +573,7 @@ class Converter {
 				console.log(`${type}  |  Due to uneven binning sizes, position order may be changed.`);
 				break;
 			case constants.events.export.qlw.NEW:
-				console.log(`${type}  |  Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions})`);
+				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions})`);
 				break;
 			case constants.events.export.qlw.POSFAIL:
 				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);

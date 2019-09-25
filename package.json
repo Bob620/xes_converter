@@ -28,6 +28,6 @@
   "homepage": "https://github.com/Bob620/xes_converter#readme",
   "dependencies": {
     "bit-buffer": "^0.2.3",
-    "sxes-compressor": "bob620/sxes-compressor"
+    "sxes-compressor": "file:../sxes-compressor"
   }
 }
