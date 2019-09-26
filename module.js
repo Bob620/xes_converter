@@ -1,4 +1,5 @@
 const EventEmitter = require('events');
+const crypto = require('crypto');
 
 const Directory = require('./structures/directory');
 const Classifier = require('./util/classification');
@@ -6,12 +7,15 @@ const csv = require('./util/csv');
 const json = require('./util/json');
 const plZip = require('./util/plzip');
 const createEmit = require('./util/emitter');
+const extractMeta = require('./util/plMeta.js');
 
 const Processor = require('./processor');
 const conversions = require('./util/conversions');
 const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
+
+const { createPLZip, constants: plConstants } = require('sxes-compressor');
 
 class Converter {
 	constructor(options={}) {
@@ -74,46 +78,15 @@ class Converter {
 	}
 
 	async exportQlwToJson(options={}, directorySubset=[]) {
+		const start = Date.now();
 		const emit = createEmit.createEmit(this.data.emitter, '');
 
 		emit(constants.events.export.qlw.START);
 		options = this.exportOptionsSanitize(this.transformOptions(options));
-		const workingUri = this.data.workingDir.getUri();
-		const classifiedDirs = this.data.classifiedWorkingDir.qlws;
 		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
 		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
 
-		let pointSubset = new Map();
-
-		if (directorySubset.length !== 0) {
-			directorySubset = directorySubset.map(subUri => `${workingUri}/${subUri.replace(/\\/giu, '/')}`).filter(uri => {
-				if (classifiedDirs.has(uri))
-					return true;
-				else {
-					const qlwDirName = uri.split('/').slice(0, -1).join('/');
-					if (classifiedDirs.has(qlwDirName)) {
-						let qlwPosDir = pointSubset.get(qlwDirName);
-						if (qlwPosDir) {
-							const pos = qlwPosDir.dir.getPosition(uri);
-							if (pos)
-								qlwPosDir.positions.push(pos);
-						} else {
-							qlwPosDir = {
-								dir: classifiedDirs.get(qlwDirName),
-								positions: []
-							};
-
-							const pos = qlwPosDir.dir.getPosition(uri);
-							if (pos)
-								qlwPosDir.positions.push(pos);
-
-							pointSubset.set(qlwDirName, qlwPosDir);
-						}
-					}
-				}
-			});
-		} else
-			directorySubset = classifiedDirs;
+		directorySubset = await this.exportClassify(directorySubset);
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
@@ -147,7 +120,8 @@ class Converter {
 									batchLength,
 									totalPositions,
 									failed,
-									totalExported: totalPosExported
+									totalExported: totalPosExported,
+									seconds: Date.now() - start
 								}
 							);
 
@@ -191,7 +165,8 @@ class Converter {
 					batchLength,
 					totalPositions,
 					failed,
-					totalExported: totalPosExported
+					totalExported: totalPosExported,
+					seconds: Date.now() - start
 				});
 			}
 		}
@@ -200,58 +175,29 @@ class Converter {
 			totalPosExported,
 			failed,
 			outputUri,
-			outputName
+			outputName,
+			seconds: Date.now() - start
 		});
 
 		return {
 			totalPosExported,
 			failed,
 			outputUri,
-			outputName
+			outputName,
+			seconds: Date.now() - start
 		}
 	}
 
 	async exportQlwToCsv(options={}, directorySubset=[]) {
+		const start = Date.now();
 		const emit = createEmit.createEmit(this.data.emitter, '');
 
 		emit(constants.events.export.qlw.START);
 		options = this.exportOptionsSanitize(this.transformOptions(options));
-		const workingUri = this.data.workingDir.getUri();
-		const classifiedDirs = this.data.classifiedWorkingDir.qlws;
 		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
 		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
 
-		let pointSubset = new Map();
-
-		if (directorySubset.length !== 0) {
-			directorySubset = directorySubset.map(subUri => `${workingUri}/${subUri.replace(/\\/giu, '/')}`).filter(uri => {
-				if (classifiedDirs.has(uri))
-					return true;
-				else {
-					const qlwDirName = uri.split('/').slice(0, -1).join('/');
-					if (classifiedDirs.has(qlwDirName)) {
-						let qlwPosDir = pointSubset.get(qlwDirName);
-						if (qlwPosDir) {
-							const pos = qlwPosDir.dir.getPosition(uri);
-							if (pos)
-								qlwPosDir.positions.push(pos);
-						} else {
-							qlwPosDir = {
-								dir: classifiedDirs.get(qlwDirName),
-								positions: []
-							};
-
-							const pos = qlwPosDir.dir.getPosition(uri);
-							if (pos)
-								qlwPosDir.positions.push(pos);
-
-							pointSubset.set(qlwDirName, qlwPosDir);
-						}
-					}
-				}
-			});
-		} else
-			directorySubset = classifiedDirs;
+		directorySubset = await this.exportClassify(directorySubset);
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
@@ -296,7 +242,8 @@ class Converter {
 									batchLength,
 									totalPositions,
 									failed,
-									totalExported: totalPosExported
+									totalExported: totalPosExported,
+									seconds: Date.now() - start
 								}
 							);
 
@@ -351,7 +298,8 @@ class Converter {
 					batchLength,
 					totalPositions,
 					failed,
-					totalExported: totalPosExported
+					totalExported: totalPosExported,
+					seconds: Date.now() - start
 				});
 			}
 		}
@@ -360,26 +308,22 @@ class Converter {
 			totalPosExported,
 			failed,
 			outputUri,
-			outputName
+			outputName,
+			seconds: Date.now() - start
 		});
 
 		return {
 			totalPosExported,
 			failed,
 			outputUri,
-			outputName
+			outputName,
+			seconds: Date.now() - start
 		}
 	}
 
-	async exportQlwToPLZip(options={}, directorySubset=[]) {
-		const emit = createEmit.createEmit(this.data.emitter, '');
-
-		emit(constants.events.export.qlw.START);
-		options = this.exportOptionsSanitize(this.transformOptions(options));
+	async exportClassify(directorySubset) {
 		const workingUri = this.data.workingDir.getUri();
 		const classifiedDirs = this.data.classifiedWorkingDir.qlws;
-		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
-		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
 
 		let pointSubset = new Map();
 
@@ -411,103 +355,95 @@ class Converter {
 				}
 			});
 		} else
-			directorySubset = classifiedDirs;
+			return classifiedDirs;
+		return directorySubset;
+	}
+
+	async exportQlwToPLZip(options={}, directorySubset=[]) {
+		const start = Date.now();
+		const emit = createEmit.createEmit(this.data.emitter, '');
+
+		emit(constants.events.export.qlw.START);
+
+		options = this.exportOptionsSanitize(this.transformOptions(options));
+		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
+		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
+
+		const sxesGroup = await createPLZip(outputUri, outputName);
+		let groupHashes = new Set();
+		let totalPosExported = 0;
+		let batchLength = 0;
+
+		directorySubset = await this.exportClassify(directorySubset);
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
 		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
-		let failed = 0;
-		let totalPosExported = 0;
-		let batchLength = 0;
 
-		if (options.qlw || options.xes || options.sum) {
-			let itemsToWrite = [];
-			let qlwDirData;
-
+		if (options.qlw || options.xes || options.sum)
 			for (const [uri, qlwDir] of directorySubset) {
 				const positions = qlwDir.getPositions();
 
 				if (positions.size > 0) {
-					qlwDirData = {
-						mapCond: qlwDir.getMapCond(),
-						mapRawCond: qlwDir.getMapRawCond(),
-						positions: []
-					};
+					const mapCond = qlwDir.getMapCond();
+					const mapRawCond = qlwDir.getMapRawCond();
 
-					for (const [, pos] of positions) {
-						if (batchLength >= options.batchSize) {
-							itemsToWrite.push(qlwDirData);
-							totalPosExported += batchLength;
+					const conditionMeta = extractMeta.condition(mapCond, mapRawCond);
+					const rawConditionMeta = extractMeta.rawCondition(mapCond, mapRawCond);
 
-							await plZip.writeToZip(outputUri, outputName, itemsToWrite);
+					const [
+						conditionHash,
+						rawConditionHash
+					] = [
+						JSON.stringify(conditionMeta),
+						JSON.stringify(rawConditionMeta)
+					].map(data => {
+						const hash = crypto.createHash('sha256');
+						hash.update(data);
+						return hash.digest().toString('hex');
+					});
 
-							emit(constants.events.export.qlw.NEW,
-								{
-									batchLength,
-									totalPositions,
-									failed,
-									totalExported: totalPosExported
-								}
-							);
-
-							batchLength = 0;
-							itemsToWrite = [];
-							qlwDirData.positions = [];
-						}
-
-						let posData = {
-							dataCond: pos.getDataCond()
-						};
-
-						try {
-							if (options.qlw)
-								posData.qlwData = pos.getQlwData();
-							if (options.xes)
-								posData.xesData = pos.getXesData(options);
-							if (options.sum)
-								posData.sumData = pos.getSumData(posData.xesData);
-
-							qlwDirData.positions.push(posData);
-							batchLength++;
-						} catch (err) {
-							console.log(err);
-
-							emit(constants.events.export.qlw.POSFAIL, {position: pos, err});
-							failed++;
-						}
+					if (!groupHashes.has(rawConditionHash)) {
+						groupHashes.add(rawConditionHash);
+						await sxesGroup.archive.update(`${plConstants.fileStructure.rawCondition.ROOT}/${rawConditionHash}.json`, JSON.stringify(rawConditionMeta));
 					}
 
-					if (qlwDirData.positions.length > 0)
-						itemsToWrite.push(qlwDirData);
+					if (!groupHashes.has(conditionHash)) {
+						groupHashes.add(conditionHash);
+						await sxesGroup.archive.update(`${plConstants.fileStructure.condition.ROOT}/${conditionHash}.json`, JSON.stringify(conditionMeta));
+					}
+
+					const plZipReturn = await plZip.writeToZip(sxesGroup.archive, Array.from(positions.values()), options, emit, {
+						groupHashes,
+						rawConditionHash,
+						conditionHash,
+						mapCond,
+						mapRawCond
+					}, {
+						start,
+						totalPositions,
+						totalPosExported,
+						batchLength
+					});
+
+					groupHashes = plZipReturn.groupHashes;
+					totalPosExported = plZipReturn.totalPosExported;
+					batchLength = plZipReturn.batchLength;
 				}
 			}
 
-			if (itemsToWrite.length !== 0) {
-				totalPosExported += batchLength;
-
-				await plZip.writeToZip(outputUri, outputName, itemsToWrite);
-
-				emit(constants.events.export.qlw.NEW, {
-					batchLength,
-					totalPositions,
-					failed,
-					totalExported: totalPosExported
-				});
-			}
-		}
-
 		emit(constants.events.export.qlw.DONE, {
 			totalPosExported,
-			failed,
 			outputUri,
-			outputName
+			outputName,
+			seconds: Date.now() - start
 		});
 
 		return {
 			totalPosExported,
-			failed,
 			outputUri,
-			outputName
+			outputName,
+			seconds: Date.now() - start
 		}
 	}
 
@@ -573,7 +509,8 @@ class Converter {
 				console.log(`${type}  |  Due to uneven binning sizes, position order may be changed.`);
 				break;
 			case constants.events.export.qlw.NEW:
-				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions})`);
+				data.failed = data.failed ? data.failed : 0;
+				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds/1000}s`);
 				break;
 			case constants.events.export.qlw.POSFAIL:
 				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);
