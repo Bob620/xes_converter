@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fsPromise = require('fs').promises;
 const crypto = require('crypto');
 //const util = require('util');
 
@@ -12,7 +12,7 @@ const { constants: plConstants } = require('sxes-compressor');
 //const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
 module.exports = {
-    writeToZip: async (archive, positions, extractOptions, emit, {
+    writeToZip: async (uri, positions, extractOptions, emit, {
         groupHashes=[],
         conditionHash,
         rawConditionHash,
@@ -24,7 +24,7 @@ module.exports = {
         totalPosExported,
         batchLength
     }) => {
-        groupHashes = groupHashes.length !== 0 ? groupHashes : new Set((await archive.list(`${plConstants.fileStructure.background.ROOT}/*`)).filter(({name}) => !name.startsWith(plConstants.fileStructure.position.ROOT)).map(({name}) => name.split('/').pop().replace('.json', '')));
+        groupHashes = groupHashes.length !== 0 ? groupHashes : new Set((await fsPromise.readdir(`${uri}/${plConstants.fileStructure.background.ROOT}/`)).filter(({name}) => !name.startsWith(plConstants.fileStructure.position.ROOT)).map(({name}) => name.split('/').pop().replace('.json', '')));
 
         // Iterate over the items
         for (const position of positions) {
@@ -45,11 +45,12 @@ module.exports = {
                 batchLength = 0;
             }
 
+            await fsPromise.mkdir(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}`);
             const metadata = extractMeta.positional(mapCond, mapRawCond, position.getDataCond());
 
             try {
                 if (extractOptions.qlw)
-                    await archive.update(`${plConstants.fileStructure.position.ROOT}/${uuid}/qlw.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(position.getQlwData().rawData));
+                    await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/qlw.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(position.getQlwData().rawData));
             } catch(err) {
                 //console.log(err);
                 emit(constants.events.export.qlw.POSFAIL, {position, err});
@@ -67,13 +68,13 @@ module.exports = {
 
                     if (!groupHashes.has(backgroundHash)) {
                         groupHashes.add(backgroundHash);
-                        await archive.update(`${plConstants.fileStructure.background.ROOT}/${backgroundHash}`, Buffer.from(xesData.rawBackground));
+                        await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.background.ROOT}/${backgroundHash}`, Buffer.from(xesData.rawBackground));
                     }
 
-                    await archive.update(`${plConstants.fileStructure.position.ROOT}/${uuid}/xes.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(xesData.rawData));
+                    await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/xes.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(xesData.rawData));
 
                     if (extractOptions.sum)
-                        await archive.update(`${plConstants.fileStructure.position.ROOT}/${uuid}/sum.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(position.getSumData(xesData).data));
+                        await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/sum.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(position.getSumData(xesData).data));
                 }
             } catch(err) {
                 //console.log(err);
@@ -82,7 +83,7 @@ module.exports = {
 
             try {
                 if (extractOptions.sum && !extractOptions.xes)
-                    await archive.update(`${plConstants.fileStructure.position.ROOT}/${uuid}/sum.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(position.getSumData().data));
+                    await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/sum.${plConstants.fileStructure.position.DATAEXTENTION}`, Buffer.from(position.getSumData().data));
             } catch(err) {
                 //console.log(err);
                 emit(constants.events.export.qlw.POSFAIL, {position, err});
@@ -92,8 +93,8 @@ module.exports = {
             metadata.position[plConstants.positionMeta.CONDITIONUUID] = conditionHash;
             metadata.position[plConstants.positionMeta.RAWCONDTIONUUID] = rawConditionHash;
 
-            await archive.update(`${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.STATE}`, JSON.stringify(metadata.state));
-            await archive.update(`${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.METAFILE}`, JSON.stringify(metadata.position));
+            await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.STATE}`, JSON.stringify(metadata.state));
+            await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.METAFILE}`, JSON.stringify(metadata.position));
             batchLength++;
         }
 

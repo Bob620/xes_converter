@@ -318,7 +318,7 @@ else {
 
 			if (options.exportTypes.includes(constants.export.types.PLZIP))
 				converter.exportQlwToPLZip(options).then(data => {
-					console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+					console.log(`${data.totalExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}/${data.outputName}.zip`);
 				}).catch(console.log);
 
 			if (options.exportTypes.includes(constants.export.types.CSV))

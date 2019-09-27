@@ -92,7 +92,8 @@
         "READY": "export.qlw.ready",
         "NEW": "export.qlw.new",
         "POSFAIL": "export.qlw.posFail",
-        "DONE": "export.qlw.done"
+        "DONE": "export.qlw.done",
+        "COMPRESS": "export.qlw.compress"
       },
       "map": {
         "NEW": "export.map.new",

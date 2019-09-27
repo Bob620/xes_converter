@@ -1,11 +1,13 @@
 const EventEmitter = require('events');
 const crypto = require('crypto');
+const fsPromise = require('fs').promises;
 
 const Directory = require('./structures/directory');
 const Classifier = require('./util/classification');
 const csv = require('./util/csv');
 const json = require('./util/json');
 const plZip = require('./util/plzip');
+const plZipTest = require('./util/plziptest');
 const createEmit = require('./util/emitter');
 const extractMeta = require('./util/plMeta.js');
 
@@ -375,6 +377,12 @@ class Converter {
 		let batchLength = 0;
 
 		directorySubset = await this.exportClassify(directorySubset);
+		const tempFolder = `${outputUri}/${outputName}.plzip.tmp`;
+		await fsPromise.mkdir(tempFolder);
+		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.background.ROOT}`);
+		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.condition.ROOT}`);
+		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.rawCondition.ROOT}`);
+		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.position.ROOT}`);
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
@@ -405,15 +413,15 @@ class Converter {
 
 					if (!groupHashes.has(rawConditionHash)) {
 						groupHashes.add(rawConditionHash);
-						await sxesGroup.archive.update(`${plConstants.fileStructure.rawCondition.ROOT}/${rawConditionHash}.json`, JSON.stringify(rawConditionMeta));
+						await fsPromise.writeFile(`${tempFolder}/${plConstants.fileStructure.rawCondition.ROOT}/${rawConditionHash}.json`, JSON.stringify(rawConditionMeta));
 					}
 
 					if (!groupHashes.has(conditionHash)) {
 						groupHashes.add(conditionHash);
-						await sxesGroup.archive.update(`${plConstants.fileStructure.condition.ROOT}/${conditionHash}.json`, JSON.stringify(conditionMeta));
+						await fsPromise.writeFile(`${tempFolder}/${plConstants.fileStructure.condition.ROOT}/${conditionHash}.json`, JSON.stringify(conditionMeta));
 					}
 
-					const plZipReturn = await plZip.writeToZip(sxesGroup.archive, Array.from(positions.values()), options, emit, {
+					const plZipReturn = await plZipTest.writeToZip(tempFolder, Array.from(positions.values()), options, emit, {
 						groupHashes,
 						rawConditionHash,
 						conditionHash,
@@ -432,17 +440,42 @@ class Converter {
 				}
 			}
 
+		if (batchLength > 0) {
+			totalPosExported += batchLength;
+
+			emit(constants.events.export.qlw.NEW,
+				{
+					batchLength,
+					totalPositions,
+					totalExported: totalPosExported,
+					seconds: Date.now() - start
+				}
+			);
+		}
+
+		emit(constants.events.export.qlw.COMPRESS,
+			{
+				totalExported: totalPosExported,
+				seconds: Date.now() - start
+			}
+		);
+
+		await sxesGroup.archive.addFrom(`${tempFolder}/*`, true);
+		await fsPromise.rmdir(tempFolder);
+
 		emit(constants.events.export.qlw.DONE, {
-			totalPosExported,
+			totalExported: totalPosExported,
 			outputUri,
 			outputName,
+			failed: 0,
 			seconds: Date.now() - start
 		});
 
 		return {
-			totalPosExported,
+			totalExported: totalPosExported,
 			outputUri,
 			outputName,
+			failed: 0,
 			seconds: Date.now() - start
 		}
 	}
@@ -478,7 +511,7 @@ class Converter {
 				console.log(`${type}  |  Finalizing directory classification...`);
 				break;
 			case constants.events.classify.CLASSIFIED:
-				console.log(`${type}  |  ${data.output.totalDirectories} classified with ${data.output.totalQlwPositions} identified`);
+				console.log(`${type}  |  ${data.output.totalDirectories} classified directories with ${data.output.totalQlwPositions} identified positions`);
 				break;
 			case constants.events.classify.exploring.START:
 				console.log(`${type}  |  Exploring directory...`);
@@ -514,6 +547,9 @@ class Converter {
 				break;
 			case constants.events.export.qlw.POSFAIL:
 				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);
+				break;
+			case constants.events.export.qlw.COMPRESS:
+				console.log(`${type}  |  Starting compression of ${data.totalExported} positions...`);
 				break;
 		}
 	}
