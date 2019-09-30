@@ -40,20 +40,25 @@ module.exports = {
 			mapRawCondition: {}
 		};
 	},
+	project: (mapCond) => {
+		return {
+			name: mapCond.get('xm_cp_project_name'),
+			comment: '',
+			operator: mapCond.get('xm_cp_operator')
+		}
+	},
+	analysis: (mapCond) => {
+		return {
+			acquisitionDate: mapCond.get('xm_analysis_acq_date'),
+			comment: mapCond.get('xm_cp_comment'),
+			operator: mapCond.get('xm_cp_operator'),
+			instrument: mapCond.get('xm_analysis_instrument')
+		};
+	},
 	positional: (mapCond, mapRawCond, dataCond) => {
 		// Metadata that needs to be computed, goes into extra
 		const [stageX, stageY, stageZ] = dataCond.get('xm_ap_acm_stage_pos%0_0').split(' ').map(parseFloat);
 
-		let project = {
-			name: dataCond.get('xm_cp_project_name'),
-			comment: '',
-			operator: mapCond.get('xm_cp_operator')
-		};
-		let analysis = {
-			acquisitionDate: dataCond.get('xm_analysis_acq_date'),
-			comment: mapCond.get('xm_cp_comment'),
-			operator: mapCond.get('xm_cp_operator')
-		};
 		let position = {
 			comment: dataCond.get('xm_cp_comment'),
 			operator: dataCond.get('xm_cp_operator')
@@ -96,8 +101,6 @@ module.exports = {
 		};
 
 		return {
-			project,
-			analysis,
 			position,
 			state
 		};

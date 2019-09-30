@@ -10,6 +10,7 @@ const plZip = require('./util/plzip');
 const plZipTest = require('./util/plziptest');
 const createEmit = require('./util/emitter');
 const extractMeta = require('./util/plMeta.js');
+const generateUuid = require('./util/generateuuid');
 
 const Processor = require('./processor');
 const conversions = require('./util/conversions');
@@ -377,7 +378,7 @@ class Converter {
 		let batchLength = 0;
 
 		directorySubset = await this.exportClassify(directorySubset);
-		const tempFolder = `${outputUri}/${outputName}.plzip.tmp`;
+		const tempFolder = `${outputUri}/${outputName}.plzip.folder.tmp`;
 		await fsPromise.mkdir(tempFolder);
 		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.background.ROOT}`);
 		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.condition.ROOT}`);
@@ -387,6 +388,9 @@ class Converter {
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
 		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+
+		let projects = new Map();
+		let analyses = new Map();
 
 		if (options.qlw || options.xes || options.sum)
 			for (const [uri, qlwDir] of directorySubset) {
@@ -398,6 +402,22 @@ class Converter {
 
 					const conditionMeta = extractMeta.condition(mapCond, mapRawCond);
 					const rawConditionMeta = extractMeta.rawCondition(mapCond, mapRawCond);
+					const analysis = extractMeta.analysis(mapCond);
+					let project = extractMeta.project(mapCond);
+
+					analysis.uuid = generateUuid.v4();
+					analysis.positionUuids = [];
+					analyses.set(analysis.uuid, analysis);
+
+					if (!projects.has(project.name)) {
+						project.uuid = generateUuid.v4();
+						project.analysisUuids = [];
+
+						projects.set(project.name, project);
+					} else
+						project = projects.get(project.name);
+
+					project.analysisUuids.push(analysis.uuid);
 
 					const [
 						conditionHash,
@@ -422,6 +442,7 @@ class Converter {
 					}
 
 					const plZipReturn = await plZipTest.writeToZip(tempFolder, Array.from(positions.values()), options, emit, {
+						analysis,
 						groupHashes,
 						rawConditionHash,
 						conditionHash,
@@ -448,27 +469,40 @@ class Converter {
 					batchLength,
 					totalPositions,
 					totalExported: totalPosExported,
-					seconds: Date.now() - start
+					seconds: (Date.now() - start)/1000
 				}
 			);
 		}
 
-		emit(constants.events.export.qlw.COMPRESS,
+		await fsPromise.writeFile(`${tempFolder}/${plConstants.fileStructure.METADATA}`, JSON.stringify({
+			projects: Array.from(projects.values()),
+			analyses: Array.from(analyses.values())
+		}));
+
+		emit(constants.events.export.qlw.compress.START,
 			{
 				totalExported: totalPosExported,
-				seconds: Date.now() - start
+				seconds: (Date.now() - start)/1000
 			}
 		);
 
 		await sxesGroup.archive.addFrom(`${tempFolder}/*`, true);
 		await fsPromise.rmdir(tempFolder);
 
+		emit(constants.events.export.qlw.compress.DONE,
+			{
+				totalExported: totalPosExported,
+				seconds: (Date.now() - start)/1000
+			}
+		);
+
 		emit(constants.events.export.qlw.DONE, {
 			totalExported: totalPosExported,
+			totalPositions,
 			outputUri,
 			outputName,
 			failed: 0,
-			seconds: Date.now() - start
+			seconds: (Date.now() - start)/1000
 		});
 
 		return {
@@ -476,7 +510,7 @@ class Converter {
 			outputUri,
 			outputName,
 			failed: 0,
-			seconds: Date.now() - start
+			seconds: (Date.now() - start)/1000
 		}
 	}
 
@@ -543,13 +577,23 @@ class Converter {
 				break;
 			case constants.events.export.qlw.NEW:
 				data.failed = data.failed ? data.failed : 0;
-				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds/1000}s`);
+				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds}s`);
+				break;
+			case constants.events.export.qlw.DONE:
+				data.failed = data.failed ? data.failed : 0;
+				console.log(`${type}  |  Total Failed: ${data.failed}, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds}s`);
 				break;
 			case constants.events.export.qlw.POSFAIL:
 				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);
 				break;
-			case constants.events.export.qlw.COMPRESS:
+			case constants.events.export.qlw.compress.START:
 				console.log(`${type}  |  Starting compression of ${data.totalExported} positions...`);
+				break;
+			case constants.events.export.qlw.compress.UPDATE: // Not functioning due to no 7z native support
+				console.log(`${type}  |  ${data.percent} ${data.seconds}s`);
+				break;
+			case constants.events.export.qlw.compress.DONE:
+				console.log(`${type}  |  Finished compression of ${data.totalExported} positions. ${data.seconds}s`);
 				break;
 		}
 	}

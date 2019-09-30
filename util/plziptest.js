@@ -13,6 +13,7 @@ const { constants: plConstants } = require('sxes-compressor');
 
 module.exports = {
     writeToZip: async (uri, positions, extractOptions, emit, {
+        analysis,
         groupHashes=[],
         conditionHash,
         rawConditionHash,
@@ -38,7 +39,7 @@ module.exports = {
                         batchLength,
                         totalPositions,
                         totalExported: totalPosExported,
-                        seconds: Date.now() - start
+                        seconds: (Date.now() - start)/1000
                     }
                 );
 
@@ -95,6 +96,8 @@ module.exports = {
 
             await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.STATE}`, JSON.stringify(metadata.state));
             await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.METAFILE}`, JSON.stringify(metadata.position));
+
+            analysis.positionUuids.push(uuid);
             batchLength++;
         }
 
