@@ -49,6 +49,7 @@ module.exports = {
 	},
 	analysis: (mapCond) => {
 		return {
+			name: '',
 			acquisitionDate: mapCond.get('xm_analysis_acq_date'),
 			comment: mapCond.get('xm_cp_comment'),
 			operator: mapCond.get('xm_cp_operator'),
