@@ -22,14 +22,15 @@ function help() {
 	log('Usage: xes_converter [options] [directory]\n');
 	log('Options:');
 	log('-v, --version                    \tDisplays the version information');
+	log('-j, --jeol                       \tConverts the jeol qlw csv files into a similar format as below');
 	log('-x, --xes                        \tConverts the xes files into an output file located in the directory given');
 	log('-q, --qlw                        \tConverts the qlw files into an output file located in the directory given');
 	log('-s, --sum                        \tConverts the xes files into an sum file located in the directory given');
 	log('-m, --map                        \tConverts the map directories to csv');
 	log('-l, --line                       \tConverts the lin directories to csv');
 	log('-k, --qmap                       \tOutputs maps for each qlw directory');
-	log('-a, --all                        \tOutputs all data (-xqsmlk)');
-	log('-j, --loose                      \tTurns off strict checks on directories and file names');
+	log('-a, --all                        \tOutputs all data (-jxqsmlk)');
+	log('-y, --loose                      \tTurns off strict checks on directories and file names');
 	log('-r, --recover                    \tAttempts to recover data from potentially corrupted xes files');
 	log('-d, --debug                      \tEnabled debugging text');
 	log('-h, --help                       \tProvides this text');
@@ -55,6 +56,7 @@ let options = {
 	batchSize: constants.batchSize,
 	topDirectoryUri: '',
 	outputDirectoryUri: '',
+	jeol: false,
 	xes: false,
 	qlw: false,
 	sum: false,
@@ -76,6 +78,9 @@ for (let i = 2; i < process.argv.length; i++) {
 			case '--version':
 				options.version = true;
 				break;
+			case '--jeol':
+				options.jeol = true;
+				break;
 			case '--sum':
 				options.sum = true;
 				break;
@@ -92,6 +97,7 @@ for (let i = 2; i < process.argv.length; i++) {
 				options.line = true;
 				break;
 			case '--all':
+				options.jeol = true;
 				options.qlw = true;
 				options.xes = true;
 				options.sum = true;
@@ -247,6 +253,9 @@ for (let i = 2; i < process.argv.length; i++) {
 						case 's':
 							options.sum = true;
 							break;
+						case 'j':
+							options.jeol = true;
+							break;
 						case 'x':
 							options.xes = true;
 							break;
@@ -260,6 +269,7 @@ for (let i = 2; i < process.argv.length; i++) {
 							options.line = true;
 							break;
 						case 'a':
+							options.jeol = true;
 							options.qlw = true;
 							options.xes = true;
 							options.sum = true;
@@ -273,7 +283,7 @@ for (let i = 2; i < process.argv.length; i++) {
 						case 'h':
 							options.help = true;
 							break;
-						case 'j':
+						case 'y':
 							options.loose = true;
 							break;
 						case 'd':

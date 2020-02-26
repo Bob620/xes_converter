@@ -545,7 +545,7 @@ class Converter {
 				console.log(`${type}  |  Finalizing directory classification...`);
 				break;
 			case constants.events.classify.CLASSIFIED:
-				console.log(`${type}  |  ${data.output.totalDirectories} classified directories with ${data.output.totalQlwPositions} identified positions`);
+				console.log(`${type}  |  ${data.output.totalDirectories} classified directories with ${data.output.totalQlwPositions} identified positions and ${data.output.totalJeols} jeols`);
 				break;
 			case constants.events.classify.exploring.START:
 				console.log(`${type}  |  Exploring directory...`);

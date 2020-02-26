@@ -1,5 +1,5 @@
 const constants = require('./constants');
-const { createEmit } = require('../util/emitter');
+const {createEmit} = require('../util/emitter');
 
 const Qlw = require('../structures/qlw');
 const QlwPosition = require('../structures/qlwposition');
@@ -27,9 +27,13 @@ module.exports = {
 
 			if (data.line)
 				output.lines.set(uri, data.line);
+
+			if (data.jeol)
+				output.jeol.set(uri, data.jeol);
 		});
 
 		output.totalDirectories = output.qlws.size;
+		output.totalJeols = output.jeol.size;
 
 		for (const [uri] of output.maps)
 			if (!output.qlws.has(uri))
@@ -63,9 +67,13 @@ module.exports = {
 
 			if (data.line)
 				output.lines.set(uri, data.line);
+
+			if (data.jeol)
+				output.jeol.set(uri, data.jeol);
 		});
 
 		output.totalDirectories = output.qlws.size;
+		output.totalJeols = output.jeol.size;
 
 		for (const [uri] of output.maps)
 			if (!output.qlws.has(uri))
@@ -96,7 +104,11 @@ module.exports = {
 		if (data.line)
 			output.lines.set(uri, data.line);
 
+		if (data.jeol)
+			output.jeol.set(uri, data.jeol);
+
 		output.totalDirectories = output.qlws.size;
+		output.totalJeols = output.jeol.size;
 
 		for (const [uri] of output.maps)
 			if (!output.qlws.has(uri))
@@ -119,6 +131,9 @@ function mergeClassified(classifiedOne, classifiedTwo) {
 		output.qlws = new Map([...classifiedOne.qlws, ...classifiedTwo.qlws]);
 		output.maps = new Map([...classifiedOne.maps, ...classifiedTwo.maps]);
 		output.lines = new Map([...classifiedOne.lines, ...classifiedTwo.lines]);
+		output.jeol = new Map([...classifiedOne.jeol, ...classifiedTwo.jeol]);
+
+		output.totalJeols = output.jeol.size;
 
 		for (const [, data] of output.qlws)
 			output.totalQlwPositions += data.totalPositions();
@@ -144,9 +159,11 @@ function createEmptyOutput() {
 	return {
 		totalDirectories: 0,
 		totalQlwPositions: 0,
+		totalJeols: 0,
 		qlws: new Map(),
 		maps: new Map(),
-		lines: new Map()
+		lines: new Map(),
+		jeol: new Map()
 	};
 }
 
@@ -193,13 +210,19 @@ function classifyDirectory(directory, options) {
 			data.line = line;
 	}
 
+	if (options.jeol) {
+		const jeol = jeolTopFilter(directory, options);
+		if (jeol)
+			data.jeol = jeol;
+	}
+
 	return {
 		uri: directory.getUri(),
 		data
 	}
 }
 
-function qlwTopFilter(directory, {strict=true, emitter}) {
+function qlwTopFilter(directory, {strict = true, emitter}) {
 	const files = directory.getFiles();
 	const directories = directory.getDirectories();
 
@@ -304,7 +327,7 @@ function mapPositionFilter(directory, {strict, emitter}) {
 	return map;
 }
 
-function lineTopFilter(directory, {strict=true}) {
+function lineTopFilter(directory, {strict = true}) {
 	const subDir = directory.getDirectories();
 
 	if (subDir.size > 0) {
@@ -316,4 +339,15 @@ function lineTopFilter(directory, {strict=true}) {
 
 function linePositionFind(directory, {strict}) {
 	return false;
+}
+
+function jeolTopFilter(directory, {strict = true}) {
+	let jeols = new Map();
+
+	for (const [name, file] of directory.getFiles())
+		if (name.startsWith('data') && name.endsWith('.csv')) {
+			jeols.set(directory.getUri() + '/' + name, file)
+		}
+
+	return jeols.size === 0 ? false : jeols;
 }
