@@ -17,6 +17,13 @@
     "dataByteOffset" : 40
   },
   "classification": {
+    "jeol": {
+      "pos": {
+        "dataStart": "data",
+        "jeolDataExt": ".csv",
+        "dataCondExt": ".cnd"
+      }
+    },
     "qlw": {
       "top": {
         "mapCond": "MAP.cnd",
@@ -86,6 +93,10 @@
       "NEW": "qlwPos.new",
       "UPDATE": "qlwPos.update"
     },
+    "jeolPos": {
+      "NEW": "jeolPos.new",
+      "UPDATE": "jeolPos.update"
+    },
     "export": {
       "qlw": {
         "START": "export.qlw.start",
@@ -97,6 +108,18 @@
           "START": "export.qlw.compress.start",
           "UPDATE": "export.qlw.compress.update",
           "DONE": "export.qlw.compress.done"
+        }
+      },
+      "jeol": {
+        "START": "export.jeol.start",
+        "READY": "export.jeol.ready",
+        "NEW": "export.jeol.new",
+        "POSFAIL": "export.jeol.posFail",
+        "DONE": "export.jeol.done",
+        "compress": {
+          "START": "export.jeol.compress.start",
+          "UPDATE": "export.jeol.compress.update",
+          "DONE": "export.jeol.compress.done"
         }
       },
       "map": {

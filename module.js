@@ -80,6 +80,127 @@ class Converter {
 		return classifiedOutput;
 	}
 
+	async exportJeolToCsv(options = {}, directorySubset = []) {
+		const start = Date.now();
+		const emit = createEmit.createEmit(this.data.emitter, '');
+
+		emit(constants.events.export.jeol.START);
+		options = this.exportOptionsSanitize(this.transformOptions(options));
+		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
+		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
+
+		directorySubset = await this.exportClassifiedJeol(directorySubset);
+
+		emit(constants.events.export.jeol.READY, {directorySubset});
+
+
+
+		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+		let failed = 0;
+		let totalPosExported = 0;
+		let batchLength = 0;
+
+		if (options.jeol) {
+			let itemsToWrite = [];
+			let qlwDirData;
+
+			for (const [uri, qlwDir] of directorySubset) {
+				const positions = qlwDir.getPositions();
+
+				if (positions.size > 0) {
+					qlwDirData = {
+						mapCond: qlwDir.getMapCond(),
+						mapRawCond: qlwDir.getMapRawCond(),
+						positions: []
+					};
+
+					for (const [, pos] of positions) {
+						if (batchLength >= options.batchSize) {
+							itemsToWrite.push(qlwDirData);
+							totalPosExported += batchLength;
+
+							let writingPromises = [];
+
+							if (options.jeol)
+								writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_jeol_${totalPosExported}.csv`, itemsToWrite));
+
+							await Promise.all(writingPromises);
+							emit(constants.events.export.jeol.NEW,
+								{
+									batchLength,
+									totalPositions,
+									failed,
+									totalExported: totalPosExported,
+									seconds: Date.now() - start
+								}
+							);
+
+							batchLength = 0;
+							itemsToWrite = [];
+							qlwDirData.positions = [];
+						}
+
+						let posData = {
+							dataCond: pos.getDataCond()
+						};
+
+						try {
+							if (options.jeol)
+								posData.qlwData = pos.getQlwData();
+
+							qlwDirData.positions.push(posData);
+							batchLength++;
+						} catch (err) {
+							console.log(err);
+
+							emit(constants.events.export.jeol.POSFAIL, {position: pos, err});
+							failed++;
+						}
+					}
+
+					if (qlwDirData.positions.length > 0)
+						itemsToWrite.push(qlwDirData);
+				}
+			}
+
+			if (itemsToWrite.length !== 0) {
+				totalPosExported += batchLength;
+
+				let writingPromises = [];
+
+				if (options.jeol)
+					writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_jeol_${totalPosExported}.csv`, itemsToWrite));
+
+				await Promise.all(writingPromises);
+				emit(constants.events.export.jeol.NEW, {
+					batchLength,
+					totalPositions,
+					failed,
+					totalExported: totalPosExported,
+					seconds: Date.now() - start
+				});
+			}
+		}
+
+
+
+		emit(constants.events.export.jeol.DONE, {
+			totalPosExported,
+			failed,
+			outputUri,
+			outputName,
+			seconds: Date.now() - start
+		});
+
+		return {
+			totalPosExported,
+			failed,
+			outputUri,
+			outputName,
+			seconds: Date.now() - start
+		}
+	}
+
 	async exportQlwToJson(options={}, directorySubset=[]) {
 		const start = Date.now();
 		const emit = createEmit.createEmit(this.data.emitter, '');
@@ -322,6 +443,20 @@ class Converter {
 			outputName,
 			seconds: Date.now() - start
 		}
+	}
+
+	async exportClassifiedJeol(directorySubset) {
+		const workingUri = this.data.workingDir.getUri();
+		const classifiedDirs = this.data.classifiedWorkingDir.jeol;
+
+		if (directorySubset.length !== 0) {
+			directorySubset = directorySubset.map(subUri => `${workingUri}/${subUri.replace(/\\/giu, '/')}`).filter(uri => {
+				if (classifiedDirs.has(uri))
+					return true;
+			});
+		} else
+			return classifiedDirs;
+		return directorySubset;
 	}
 
 	async exportClassify(directorySubset) {
@@ -600,82 +735,3 @@ class Converter {
 }
 
 module.exports = Converter;
-
-/*
-const converter = new Converter({
-	async: false
-});
-
-const asyncConverter = new Converter({
-	autoClassifyOptions: {xes: true, qlw: true, sum: true, map: true},
-	async: true
-});
-
-converter.data.emitter.on('message', ({type, message, data}) => {
-//	console.log(`${type}  |  ${message}`);
-});
-
-asyncConverter.data.emitter.on('message', ({type, message, data}) => {
-//	console.log(`${type}  |  ${message}`);
-});
-
-//converter.data.emitter.on('directory', (id, log) => {
-//	console.log(`${id}  |  ${log}`);
-//});
-
-//let classifiedDirectories = 0;
-
-//converter.data.emitter.on('classify', (id, log) => {
-//	if (log === 'new')
-//		console.log(`${id}  |  ${Math.floor((classifiedDirectories++/converter.data.workingDir.totalSubDirectories())*100)}%`);
-//	else
-//		console.log(`${id}  |  ${log}`);
-//});
-
-converter.setWorkingDirectory('/home/mia/Downloads/Anette/');
-converter.data.workingDir.syncUpdate();
-converter.classifyWorkingDirectory({xes: true, qlw: true, sum: true, map: true});
-
-asyncConverter.setWorkingDirectory('/home/mia/Downloads/Anette/').then(async () => {
-	let test = await converter.exportQlwToCsv({qlw: true, xes: true, sum: true, outputName: 'sync'}, []);
-//	let test = converter.exportQlwToCsv({qlw: true, xes: true, sum: true, outputName: 'sync'}, ['2018-04-12_JS300N_Nitrogen\\2018-04-12_JS300_Nitrogen\\2018-04-12_JS300_Nitrogen_0002_QLW\\Pos_0001', 'kappa']);
-	let test1 = await asyncConverter.exportQlwToCsv({qlw: true, xes: true, sum: true, outputName: 'async'}, []);
-	console.log(`ASYNC:    ${asyncConverter.data.workingDir.totalSubDirectories()} total directories explored, ${asyncConverter.data.classifiedWorkingDir.totalDirectories} directories classified with ${asyncConverter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
-	console.log(`ASYNC:    ${test1.totalPosExported} positions exported with ${test1.failed} failing to be read to ${test1.outputUri}`);
-	console.log(` SYNC:    ${converter.data.workingDir.totalSubDirectories()} total directories explored, ${converter.data.classifiedWorkingDir.totalDirectories} directories classified with ${converter.data.classifiedWorkingDir.totalQlwPositions} qlw positions identified`);
-	console.log(` SYNC:    ${test.totalPosExported} positions exported with ${test.failed} failing to be read to ${test.outputUri}`);
-});
-
-/*
-
-
-module.exports = {
-	process: (uri, {batchSize=constants.batchSize, outputUri='', xes=false, qlw=false, sum=false, map=false, line=false, qmap=false, recover=false, loose=false, outputMethod={type: 'default', data: ''}}) => {
-		let options = {
-			batchSize,
-			topDirectoryUri: uri,
-			outputDirectoryUri: outputUri,
-			xes,
-			qlw,
-			sum,
-			map,
-			line,
-			qmap,
-			recover,
-			help: false,
-			version: false,
-			loose,
-			debug: false,
-			outputMethod
-		};
-
-		if (!options.xes && !options.qlw && !options.sum)
-			options.xes = true;
-
-		return Processor(options);
-	},
-	Classifier,
-	conversions,
-	Logger,
-};
-*/

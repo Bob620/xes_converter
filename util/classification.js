@@ -1,9 +1,10 @@
-const constants = require('./constants');
-const {createEmit} = require('../util/emitter');
+const constants = require('./constants.json');
+const {createEmit} = require('../util/emitter.js');
 
-const Qlw = require('../structures/qlw');
-const QlwPosition = require('../structures/qlwposition');
-const MapThing = require('../structures/map');
+const Qlw = require('../structures/qlw.js');
+const QlwPosition = require('../structures/qlwposition.js');
+const MapThing = require('../structures/map.js');
+const JeolPosition = require('../structures/jeolposition.js');
 
 module.exports = {
 	syncClassify: (dir, options) => {
@@ -341,13 +342,36 @@ function linePositionFind(directory, {strict}) {
 	return false;
 }
 
-function jeolTopFilter(directory, {strict = true}) {
-	let jeols = new Map();
+function jeolTopFilter(directory, {strict = true, emitter}) {
+	const files = directory.getFiles();
 
-	for (const [name, file] of directory.getFiles())
-		if (name.startsWith('data') && name.endsWith('.csv')) {
-			jeols.set(directory.getUri() + '/' + name, file)
-		}
+	let jeolOptions = {
+		dataCond: "",
+		jeolData: "",
+		emitter
+	};
 
-	return jeols.size === 0 ? false : jeols;
+	for (const [fileName] of files)
+		if (!strict || fileName.startsWith(constants.classification.jeol.pos.dataStart))
+			if (fileName.endsWith(constants.classification.jeol.pos.dataCondExt)) {
+				jeolOptions.dataCond = fileName;
+				break;
+			}
+
+	for (const [fileName] of files)
+		if (!strict || fileName.startsWith(constants.classification.jeol.pos.dataStart))
+			if (fileName.endsWith(constants.classification.jeol.pos.jeolDataExt)) {
+				jeolOptions.jeolData = fileName;
+				break;
+			}
+
+	// Loose Tests
+	if (!jeolOptions.jeolData || !jeolOptions.dataCond)
+		return false;
+
+	// Strict Tests
+	if (strict && jeolOptions.dataCond.split('.')[0] === jeolOptions.jeolData.split('_')[0])
+		return false;
+
+	return new JeolPosition(directory, jeolOptions);
 }

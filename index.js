@@ -302,7 +302,7 @@ for (let i = 2; i < process.argv.length; i++) {
 if (options.topDirectoryUri === '' && !options.xes && !options.qlw && !options.sum && !options.version)
 	options.help = true;
 
-if (!options.xes && !options.qlw && !options.sum)
+if (!options.xes && !options.qlw && !options.sum && !options.jeol)
 	options.xes = true;
 
 if (options.debug) {
@@ -331,10 +331,16 @@ else {
 					console.log(`${data.totalExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}/${data.outputName}.zip`);
 				}).catch(console.log);
 
-			if (options.exportTypes.includes(constants.export.types.CSV))
-				converter.exportQlwToCsv(options).then(data => {
-					console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
-				}).catch(console.log);
+			if (options.exportTypes.includes(constants.export.types.CSV)) {
+				if (options.qlw || options.xes || options.sum)
+					converter.exportQlwToCsv(options).then(data => {
+						console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+					}).catch(console.log);
+				if (options.jeol)
+					converter.exportJeolToCsv(options).then(data => {
+						console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+					}).catch(console.log);
+			}
 
 			if (options.exportTypes.includes(constants.export.types.JSON))
 				converter.exportQlwToJson(options).then(data => {

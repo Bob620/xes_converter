@@ -147,6 +147,32 @@ const conversions = {
 	},
 	mapFileToObject: () => {
 
+	},
+	jeolFileToObject: fileUri => {
+		// Jeol files are by default always 4096 points, if something changes this is the place
+		if (fileUri) {
+			const positions = [];
+			const datas = [];
+
+			// Grab the jeol file as a buffer
+			const lines = fs.readFileSync(fileUri, 'utf8').split('\n');
+
+			for (let line of lines) {
+				const [pos, data] = line.split(',');
+				positions.push(pos);
+				datas.push(data);
+			}
+
+			return {
+				length: positions.length,
+				getValueAt: pos => [positions[pos], datas[pos]],
+				serialize: () => {
+					return {data: datas, positions};
+				}
+			};
+		}
+
+		return false;
 	}
 };
 
