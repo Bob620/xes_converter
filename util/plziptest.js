@@ -90,12 +90,12 @@ module.exports = {
                 emit(constants.events.export.qlw.POSFAIL, {position, err});
             }
 
-            metadata.position[plConstants.positionMeta.UUID] = uuid;
+            metadata.position[plConstants.superDataMeta.UUID] = uuid;
             metadata.position[plConstants.positionMeta.CONDITIONUUID] = conditionHash;
             metadata.position[plConstants.positionMeta.RAWCONDTIONUUID] = rawConditionHash;
 
             await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.STATE}`, JSON.stringify(metadata.state));
-            await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.position.METAFILE}`, JSON.stringify(metadata.position));
+            await fsPromise.writeFile(`${uri}/${plConstants.fileStructure.position.ROOT}/${uuid}/${plConstants.fileStructure.superData.METAFILE}`, JSON.stringify(metadata.position));
 
             analysis.positionUuids.push(uuid);
             batchLength++;
