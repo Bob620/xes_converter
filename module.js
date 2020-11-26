@@ -18,10 +18,10 @@ const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
 
-const { createPLZip, constants: plConstants } = require('sxes-compressor');
+const {createPLZip, constants: plConstants} = require('sxes-compressor');
 
 class Converter {
-	constructor(options={}) {
+	constructor(options = {}) {
 		this.data = {
 			options,
 			workingDir: false,
@@ -33,20 +33,20 @@ class Converter {
 		this.data.emitter.on('message', this.onEmit.bind(this));
 	}
 
-	transformOptions(options={}) {
+	transformOptions(options = {}) {
 		options.emitter = options.emitter ? options.emitter : this.data.emitter;
 
 		return options;
 	}
 
-	exportOptionsSanitize(options={}) {
+	exportOptionsSanitize(options = {}) {
 		options.batchSize = options.batchSize ? options.batchSize : constants.batchSize;
 		options.tempUri = options.tempUri ? options.tempUri : constants.tempUri;
 
 		return options;
 	}
 
-	setWorkingDirectory(uri, options={}) {
+	setWorkingDirectory(uri, options = {}) {
 		options = this.transformOptions(options);
 
 		options.doNotUpdate = this.data.autoClassifyOptions;
@@ -65,7 +65,7 @@ class Converter {
 		return this.data.workingDir;
 	}
 
-	classifyWorkingDirectory(options={}) {
+	classifyWorkingDirectory(options = {}) {
 		options = this.transformOptions(options);
 
 		let classifiedOutput = Classifier.createEmptyOutput();
@@ -94,8 +94,9 @@ class Converter {
 		emit(constants.events.export.jeol.READY, {directorySubset});
 
 
-
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
+			return qlwDir.totalPositions() + accumulator;
+		}, 0);
 		let failed = 0;
 		let totalPosExported = 0;
 		let batchLength = 0;
@@ -150,7 +151,7 @@ class Converter {
 
 							qlwDirData.positions.push(posData);
 							batchLength++;
-						} catch (err) {
+						} catch(err) {
 							console.log(err);
 
 							emit(constants.events.export.jeol.POSFAIL, {position: pos, err});
@@ -183,7 +184,6 @@ class Converter {
 		}
 
 
-
 		emit(constants.events.export.jeol.DONE, {
 			totalPosExported,
 			failed,
@@ -198,10 +198,10 @@ class Converter {
 			outputUri,
 			outputName,
 			seconds: Date.now() - start
-		}
+		};
 	}
 
-	async exportQlwToJson(options={}, directorySubset=[]) {
+	async exportQlwToJson(options = {}, directorySubset = []) {
 		const start = Date.now();
 		const emit = createEmit.createEmit(this.data.emitter, '');
 
@@ -214,7 +214,9 @@ class Converter {
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
+			return qlwDir.totalPositions() + accumulator;
+		}, 0);
 		let failed = 0;
 		let totalPosExported = 0;
 		let batchLength = 0;
@@ -268,7 +270,7 @@ class Converter {
 
 							qlwDirData.positions.push(posData);
 							batchLength++;
-						} catch (err) {
+						} catch(err) {
 							console.log(err);
 
 							emit(constants.events.export.qlw.POSFAIL, {position: pos, err});
@@ -309,10 +311,10 @@ class Converter {
 			outputUri,
 			outputName,
 			seconds: Date.now() - start
-		}
+		};
 	}
 
-	async exportQlwToCsv(options={}, directorySubset=[]) {
+	async exportQlwToCsv(options = {}, directorySubset = []) {
 		const start = Date.now();
 		const emit = createEmit.createEmit(this.data.emitter, '');
 
@@ -325,7 +327,9 @@ class Converter {
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
+			return qlwDir.totalPositions() + accumulator;
+		}, 0);
 		let failed = 0;
 		let totalPosExported = 0;
 		let batchLength = 0;
@@ -390,7 +394,7 @@ class Converter {
 
 							qlwDirData.positions.push(posData);
 							batchLength++;
-						} catch (err) {
+						} catch(err) {
 							console.log(err);
 
 							emit(constants.events.export.qlw.POSFAIL, {position: pos, err});
@@ -442,7 +446,7 @@ class Converter {
 			outputUri,
 			outputName,
 			seconds: Date.now() - start
-		}
+		};
 	}
 
 	async exportClassifiedJeol(directorySubset) {
@@ -497,7 +501,7 @@ class Converter {
 		return directorySubset;
 	}
 
-	async exportQlwToPLZip(options={}, directorySubset=[]) {
+	async exportQlwToPLZip(options = {}, directorySubset = []) {
 		const start = Date.now();
 		const emit = createEmit.createEmit(this.data.emitter, '');
 
@@ -522,7 +526,9 @@ class Converter {
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => { return qlwDir.totalPositions() + accumulator }, 0);
+		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
+			return qlwDir.totalPositions() + accumulator;
+		}, 0);
 
 		let projects = new Map();
 		let analyses = new Map();
@@ -604,20 +610,21 @@ class Converter {
 					batchLength,
 					totalPositions,
 					totalExported: totalPosExported,
-					seconds: (Date.now() - start)/1000
+					seconds: (Date.now() - start) / 1000
 				}
 			);
 		}
 
 		await fsPromise.writeFile(`${tempFolder}/${plConstants.fileStructure.METADATA}`, JSON.stringify({
-			projects: Array.from(projects.values()),
-			analyses: Array.from(analyses.values())
+			[plConstants.metaMeta.PROJECTS]: Array.from(projects.values()),
+			[plConstants.metaMeta.ANALYSES]: Array.from(analyses.values()),
+			[plConstants.metaMeta.VERSION]: '0.1.0'
 		}));
 
 		emit(constants.events.export.qlw.compress.START,
 			{
 				totalExported: totalPosExported,
-				seconds: (Date.now() - start)/1000
+				seconds: (Date.now() - start) / 1000
 			}
 		);
 
@@ -627,7 +634,7 @@ class Converter {
 		emit(constants.events.export.qlw.compress.DONE,
 			{
 				totalExported: totalPosExported,
-				seconds: (Date.now() - start)/1000
+				seconds: (Date.now() - start) / 1000
 			}
 		);
 
@@ -637,7 +644,7 @@ class Converter {
 			outputUri,
 			outputName,
 			failed: 0,
-			seconds: (Date.now() - start)/1000
+			seconds: (Date.now() - start) / 1000
 		});
 
 		return {
@@ -645,8 +652,8 @@ class Converter {
 			outputUri,
 			outputName,
 			failed: 0,
-			seconds: (Date.now() - start)/1000
-		}
+			seconds: (Date.now() - start) / 1000
+		};
 	}
 
 	async onEmit({type, message, data}) {
@@ -712,11 +719,11 @@ class Converter {
 				break;
 			case constants.events.export.qlw.NEW:
 				data.failed = data.failed ? data.failed : 0;
-				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds}s`);
+				console.log(`${type}  |  Total Failed: ${data.failed}, batch wrote ${data.batchLength} positions, ${Math.floor(((data.totalExported + data.failed) / data.totalPositions) * 100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds}s`);
 				break;
 			case constants.events.export.qlw.DONE:
 				data.failed = data.failed ? data.failed : 0;
-				console.log(`${type}  |  Total Failed: ${data.failed}, ${Math.floor(((data.totalExported + data.failed)/data.totalPositions)*100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds}s`);
+				console.log(`${type}  |  Total Failed: ${data.failed}, ${Math.floor(((data.totalExported + data.failed) / data.totalPositions) * 100)}% ((${data.totalExported} + ${data.failed}) / ${data.totalPositions}) ${data.seconds}s`);
 				break;
 			case constants.events.export.qlw.POSFAIL:
 				console.log(`${type}  |  Skipping ${data.position.getDirectory().getUri()}`);
