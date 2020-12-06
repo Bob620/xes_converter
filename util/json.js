@@ -23,5 +23,18 @@ module.exports = {
 
         if (output.length > 0)
             fs.writeFileSync(fileUri, JSON.stringify(output), 'utf8');
+    },
+    writeJeolToFile: (fileUri, items) => {
+        let output = [];
+
+        // Iterate over the items
+        for (const {condition, line} of items)
+            output.push({
+                condition,
+                line: line.serialize(),
+            });
+
+        if (output.length > 0)
+            fs.writeFileSync(fileUri, JSON.stringify(output), 'utf8');
     }
 };

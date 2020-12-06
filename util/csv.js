@@ -7,168 +7,176 @@ const metadata = require('./metadata');
 //const Logger = require('./logger');
 //const log = Logger.log.bind(Logger, constants.logger.names.defaultLog);
 
+function writeAllData(fileUri, lines) {
+	return new Promise(async resolve => {
+		const stream = fs.createWriteStream(fileUri, 'utf8');
+
+		while (lines.length > 0) {
+			await new Promise(resolve => {
+				if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof (elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
+					stream.once('drain', resolve);
+				else
+					process.nextTick(resolve);
+			});
+		}
+
+		stream.close();
+		resolve();
+	});
+}
+
 module.exports = {
-    writeQlwToFile: (fileUri, items) => {
-        let lines = [];
+	writeQlwToFile: (fileUri, items) => {
+		let lines = [];
 
-        // Set up all the lines needed for metadata
-        for (let i = 0; i < constants.metadata.length; i++)
-            lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
+		// Set up all the lines needed for metadata
+		for (let i = 0; i < constants.metadata.length; i++)
+			lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
 
-        // Qlw don't provide noise
-        lines.push(['Probe Data']);
+		// Qlw don't provide noise
+		lines.push(['Probe Data']);
 
-        const metaLines = lines.length;
+		const metaLines = lines.length;
 
-        const qlwLength = items[0].positions[0].qlwData.length;
-        const lengthFactor = 8;
-        const qlwModLength = Math.floor(qlwLength/lengthFactor);
+		const qlwLength = items[0].positions[0].qlwData.length;
+		const lengthFactor = 8;
+		const qlwModLength = Math.floor(qlwLength / lengthFactor);
 
-        for (let i = 0; i < qlwModLength*lengthFactor; i += lengthFactor)
-            lines.push([i], [i+1], [i+2], [i+3], [i+4], [i+5], [i+6], [i+7]);
+		for (let i = 0; i < qlwModLength * lengthFactor; i += lengthFactor)
+			lines.push([i], [i + 1], [i + 2], [i + 3], [i + 4], [i + 5], [i + 6], [i + 7]);
 
-        for (let i = 0; i < qlwLength%lengthFactor; i++)
-            lines.push([qlwModLength*lengthFactor + i]);
+		for (let i = 0; i < qlwLength % lengthFactor; i++)
+			lines.push([qlwModLength * lengthFactor + i]);
 
-        // Iterate over the items
-        for (const {mapCond, mapRawCond, positions} of items)
-            for (const {dataCond, qlwData} of positions) {
+		// Iterate over the items
+		for (const {mapCond, mapRawCond, positions} of items)
+			for (const {dataCond, qlwData} of positions) {
 
-                // Grab all the needed metadata
-                const meta = metadata(mapCond, mapRawCond, dataCond);
-                for (let i = 0; i < metaLines; i++)
-                    lines[i].push(meta[i]);
+				// Grab all the needed metadata
+				const meta = metadata(mapCond, mapRawCond, dataCond);
+				for (let i = 0; i < metaLines; i++)
+					lines[i].push(meta[i]);
 
-                // Append the data to the array (easiest way to work with csv atm)
-                for (let i = 0; i < qlwLength; i++) // Position iteration
-                    lines[i + metaLines].push(qlwData.getValueAt(i));
-            }
+				// Append the data to the array (easiest way to work with csv atm)
+				for (let i = 0; i < qlwLength; i++) // Position iteration
+					lines[i + metaLines].push(qlwData.getValueAt(i));
+			}
 
-        // Write out everything all at once
-        return new Promise(async resolve => {
-            const stream = fs.createWriteStream(fileUri, 'utf8');
+		return writeAllData(fileUri, lines);
+	},
+	writeXesToFile: (fileUri, items) => {
+		let lines = [];
 
-            while (lines.length > 0) {
-                await new Promise(resolve => {
-                    if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
-                        stream.once('drain', resolve);
-                    else
-                        process.nextTick(resolve);
-                });
-            }
+		// Set up all the lines needed for metadata
+		for (let i = 0; i < constants.metadata.length; i++)
+			lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
 
-            stream.close();
-            resolve();
-        });
-    },
-    writeXesToFile: (fileUri, items) => {
-        let lines = [];
+		lines.push(['Probe Data and Background Data']);
 
-        // Set up all the lines needed for metadata
-        for (let i = 0; i < constants.metadata.length; i++)
-            lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
+		const metaLines = lines.length;
 
-        lines.push(['Probe Data and Background Data']);
+		// Each item can have wildly different data and background lengths, but both background and data should be the same length
+		// Because of this we need a way to quantify the longest set and build around that
+		// Only the Y axis should be binned for the moment, if X were binned it would be a strange occurrence
+		let posByLength = [];
 
-        const metaLines = lines.length;
+		for (const item of items)
+			for (const position of item.positions)
+				posByLength.push([position.xesData.bins, position.xesData.poses, position, item]);
 
-        // Each item can have wildly different data and background lengths, but both background and data should be the same length
-        // Because of this we need a way to quantify the longest set and build around that
-        // Only the Y axis should be binned for the moment, if X were binned it would be a strange occurrence
-        let posByLength = [];
+		posByLength.sort((a, b) => {
+			return b[0] - a[0];
+		});
 
-        for (const item of items)
-            for (const position of item.positions)
-                posByLength.push([position.xesData.bins, position.xesData.poses, position, item]);
+		// y + 1 sets of data and another y + 1 sets of background based on the ccd camera size
+		for (let i = 0; i < posByLength[0][0] * posByLength[0][1] * 2; i++)
+			lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 
-        posByLength.sort((a, b) => {
-            return b[0] - a[0];
-        });
+		for (const [yBins, xBins, {dataCond, xesData}, {mapCond, mapRawCond}] of posByLength) {
 
-        // y + 1 sets of data and another y + 1 sets of background based on the ccd camera size
-        for (let i = 0; i < posByLength[0][0] * posByLength[0][1] * 2; i++)
-            lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
+			// Grab all the needed metadata
+			const meta = metadata(mapCond, mapRawCond, dataCond);
+			for (let i = 0; i < metaLines; i++)
+				lines[i].push(meta[i]);
 
-        for (const [yBins, xBins, {dataCond, xesData}, {mapCond, mapRawCond}] of posByLength) {
+			// Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
+			for (let i = 0; i < yBins; i++) // Bin iteration
+				for (let k = 0; k < xBins; k++) { // Position iteration
+					lines[(i * xBins) + k + metaLines].push(xesData.getDataAt(i, k));
+					lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.getBackgroundAt(i, k));
+				}
+		}
 
-            // Grab all the needed metadata
-            const meta = metadata(mapCond, mapRawCond, dataCond);
-            for (let i = 0; i < metaLines; i++)
-                lines[i].push(meta[i]);
+		return writeAllData(fileUri, lines);
+	},
+	writeSumToFile: (fileUri, items) => {
+		let lines = [];
 
-            // Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
-            for (let i = 0; i < yBins; i++) // Bin iteration
-                for (let k = 0; k < xBins; k++) { // Position iteration
-                    lines[(i * xBins) + k + metaLines].push(xesData.getDataAt(i, k));
-                    lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.getBackgroundAt(i, k));
-                }
-        }
+		// Set up all the lines needed for metadata
+		for (let i = 0; i < constants.metadata.length; i++)
+			lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
 
-        // Write out everything all at once
-        return new Promise(async resolve => {
-            const stream = fs.createWriteStream(fileUri, 'utf8');
+		lines.push(['Probe Data and Background Data']);
 
-            while (lines.length > 0) {
-                await new Promise(resolve => {
-                    if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
-                        stream.once('drain', resolve);
-                    else
-                        process.nextTick(resolve);
-                });
-            }
+		const metaLines = lines.length;
 
-            stream.close();
-            resolve();
-        });
-    },
-    writeSumToFile: (fileUri, items) => {
-        let lines = [];
+		// One set for data, one for background
+		for (let i = 0; i < items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x') * 2; i++)
+			lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
 
-        // Set up all the lines needed for metadata
-        for (let i = 0; i < constants.metadata.length; i++)
-            lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
+		// Iterate over the items
+		for (const {mapCond, mapRawCond, positions} of items)
+			for (const {dataCond, sumData} of positions) {
 
-        lines.push(['Probe Data and Background Data']);
+				// Grab all the needed metadata
+				const meta = metadata(mapCond, mapRawCond, dataCond);
+				for (let i = 0; i < metaLines; i++)
+					lines[i].push(meta[i]);
 
-        const metaLines = lines.length;
+				const binXLength = sumData.data.length;
 
-        // One set for data, one for background
-        for (let i = 0; i < items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x') * 2; i++)
-            lines.push([i % items[0].mapRawCond.get('ccd_parameter').get('ccd_size_x')]);
+				// Append the data to the array (easiest way to work with csv atm)
+				for (let k = 0; k < binXLength; k++) { // Position iteration
+					lines[k + metaLines].push(sumData.data[k]);
+					lines[binXLength + k + metaLines].push(sumData.background[k]);
+				}
+			}
 
-        // Iterate over the items
-        for (const {mapCond, mapRawCond, positions} of items)
-            for (const {dataCond, sumData} of positions) {
+		return writeAllData(fileUri, lines);
+	},
+	writeJeolToFile: (fileUri, positions) => {
+		let lines = [];
 
-                // Grab all the needed metadata
-                const meta = metadata(mapCond, mapRawCond, dataCond);
-                for (let i = 0; i < metaLines; i++)
-                    lines[i].push(meta[i]);
+		// Post-processed QLW data
+		lines.push(['JEOL QLW Data']);
 
-                const binXLength = sumData.data.length;
+		const metaLines = lines.length;
 
-                // Append the data to the array (easiest way to work with csv atm)
-                for (let k = 0; k < binXLength; k++) { // Position iteration
-                    lines[k + metaLines].push(sumData.data[k]);
-                    lines[binXLength + k + metaLines].push(sumData.background[k]);
-                }
-            }
+		const jeolLength = positions[0].line.length;
+		const lengthFactor = 8;
+		const jeolModLength = Math.floor(jeolLength / lengthFactor);
 
-        // Write out everything all at once
-        return new Promise(async resolve => {
-            const stream = fs.createWriteStream(fileUri, 'utf8');
+		for (let i = 0; i < jeolModLength * lengthFactor; i += lengthFactor)
+			lines.push([i], [i + 1], [i + 2], [i + 3], [i + 4], [i + 5], [i + 6], [i + 7]);
 
-            while (lines.length > 0) {
-                await new Promise(resolve => {
-                    if (!stream.write(lines.shift().map(elem => elem === undefined ? '' : typeof(elem) === 'string' ? elem.replace(/,/g, ';') : elem).join(',') + '\n'))
-                        stream.once('drain', resolve);
-                    else
-                        process.nextTick(resolve);
-                });
-            }
+		for (let i = 0; i < jeolLength % lengthFactor; i++)
+			lines.push([jeolModLength * lengthFactor + i]);
 
-            stream.close();
-            resolve();
-        });
-    }
+		// Iterate over the positions
+		for (const {condition, line} of positions) {
+
+			// Grab all the needed metadata
+			const meta = [
+				condition.get('xm_cp_comment')
+			]
+			for (let i = 0; i < metaLines; i++)
+				lines[i].push(meta[i]);
+
+			// Append the data to the array (easiest way to work with csv atm)
+			for (let i = 0; i < jeolLength; i++)
+				lines[i + metaLines].push(line.getValueAt(i)[1]);
+		}
+
+		return writeAllData(fileUri, lines);
+	}
 };

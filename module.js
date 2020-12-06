@@ -6,15 +6,10 @@ const Directory = require('./structures/directory');
 const Classifier = require('./util/classification');
 const csv = require('./util/csv');
 const json = require('./util/json');
-const plZip = require('./util/plzip');
 const plZipTest = require('./util/plziptest');
 const createEmit = require('./util/emitter');
 const extractMeta = require('./util/plMeta.js');
 const generateUuid = require('./util/generateuuid');
-
-const Processor = require('./processor');
-const conversions = require('./util/conversions');
-const Logger = require('./util/logger');
 
 const constants = require('./util/constants');
 
@@ -80,147 +75,108 @@ class Converter {
 		return classifiedOutput;
 	}
 
-	async exportJeolToCsv(options = {}, directorySubset = []) {
-		const start = Date.now();
+	async exportQlwTo(types = ['csv'], options = {}, directorySubset = []) {
 		const emit = createEmit.createEmit(this.data.emitter, '');
 
-		emit(constants.events.export.jeol.START);
+		emit(constants.events.export.qlw.START);
 		options = this.exportOptionsSanitize(this.transformOptions(options));
 		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
 		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
+		let jeolPosSubset = [];
 
-		directorySubset = await this.exportClassifiedJeol(directorySubset);
+		if (options.jeol)
+			jeolPosSubset = await this.exportClassifiedJeol(directorySubset);
+		directorySubset = await this.exportClassify(directorySubset);
 
-		emit(constants.events.export.jeol.READY, {directorySubset});
+		emit(constants.events.export.qlw.READY, {directorySubset});
+		if (options.jeol)
+			emit(constants.events.export.jeol.READY, {jeolPosSubset});
 
+		let qlwStats = {
+			totalPositions: Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
+				return qlwDir.totalPositions() + accumulator;
+			}, 0),
+			failed: 0,
+			totalPosExported: 0,
+			batchLength: 0,
+			seconds: 0
+		};
 
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
-			return qlwDir.totalPositions() + accumulator;
-		}, 0);
-		let failed = 0;
-		let totalPosExported = 0;
-		let batchLength = 0;
+		let jeolStats = {
+			totalPositions: jeolPosSubset.size,
+			failed: 0,
+			totalPosExported: 0,
+			batchLength: 0,
+			seconds: 0
+		};
 
+		let start = Date.now();
 		if (options.jeol) {
 			let itemsToWrite = [];
-			let qlwDirData;
 
-			for (const [uri, qlwDir] of directorySubset) {
-				const positions = qlwDir.getPositions();
+			for (const [uri, jeolPosition] of jeolPosSubset) {
+				try {
+					itemsToWrite.push({
+						condition: jeolPosition.getDataCond(),
+						line: jeolPosition.getData()
+					});
+				} catch(err) {
+					console.log(err);
 
-				if (positions.size > 0) {
-					qlwDirData = {
-						mapCond: qlwDir.getMapCond(),
-						mapRawCond: qlwDir.getMapRawCond(),
-						positions: []
-					};
+					emit(constants.events.export.jeol.POSFAIL, {err});
+					jeolStats.failed++;
+				}
 
-					for (const [, pos] of positions) {
-						if (batchLength >= options.batchSize) {
-							itemsToWrite.push(qlwDirData);
-							totalPosExported += batchLength;
+				if (itemsToWrite.length >= options.batchSize) {
+					jeolStats.totalPosExported += jeolStats.batchLength;
 
-							let writingPromises = [];
+					if (types.includes(constants.export.types.CSV))
+						await csv.writeJeolToFile(`${outputUri}/${outputName}_jeol_${jeolStats.totalPosExported}.csv`, itemsToWrite);
 
-							if (options.jeol)
-								writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_jeol_${totalPosExported}.csv`, itemsToWrite));
+					if (types.includes(constants.export.types.JSON))
+						await json.writeJeolToFile(`${outputUri}/${outputName}_jeol_${jeolStats.totalPosExported}.json`, itemsToWrite);
 
-							await Promise.all(writingPromises);
-							emit(constants.events.export.jeol.NEW,
-								{
-									batchLength,
-									totalPositions,
-									failed,
-									totalExported: totalPosExported,
-									seconds: Date.now() - start
-								}
-							);
+					emit(constants.events.export.jeol.NEW, {
+						batchLength: itemsToWrite.length,
+						totalPositions: jeolStats.totalPositions,
+						failed: jeolStats.failed,
+						totalExported: jeolStats.totalPosExported,
+						seconds: Date.now() - start
+					});
 
-							batchLength = 0;
-							itemsToWrite = [];
-							qlwDirData.positions = [];
-						}
-
-						let posData = {
-							dataCond: pos.getDataCond()
-						};
-
-						try {
-							if (options.jeol)
-								posData.qlwData = pos.getQlwData();
-
-							qlwDirData.positions.push(posData);
-							batchLength++;
-						} catch(err) {
-							console.log(err);
-
-							emit(constants.events.export.jeol.POSFAIL, {position: pos, err});
-							failed++;
-						}
-					}
-
-					if (qlwDirData.positions.length > 0)
-						itemsToWrite.push(qlwDirData);
+					itemsToWrite = [];
 				}
 			}
 
 			if (itemsToWrite.length !== 0) {
-				totalPosExported += batchLength;
+				jeolStats.totalPosExported += itemsToWrite.length;
 
-				let writingPromises = [];
+				if (types.includes(constants.export.types.CSV))
+					await csv.writeJeolToFile(`${outputUri}/${outputName}_jeol_${jeolStats.totalPosExported}.csv`, itemsToWrite);
 
-				if (options.jeol)
-					writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_jeol_${totalPosExported}.csv`, itemsToWrite));
+				if (types.includes(constants.export.types.JSON))
+					await json.writeJeolToFile(`${outputUri}/${outputName}_jeol_${jeolStats.totalPosExported}.json`, itemsToWrite);
 
-				await Promise.all(writingPromises);
 				emit(constants.events.export.jeol.NEW, {
-					batchLength,
-					totalPositions,
-					failed,
-					totalExported: totalPosExported,
+					batchLength: itemsToWrite.length,
+					totalPositions: jeolStats.totalPositions,
+					failed: jeolStats.failed,
+					totalExported: jeolStats.totalPosExported,
 					seconds: Date.now() - start
 				});
 			}
+
+			emit(constants.events.export.jeol.DONE, {
+				totalPosExported: jeolStats.totalPosExported,
+				failed: jeolStats.failed,
+				outputUri,
+				outputName,
+				seconds: Date.now() - start
+			});
 		}
+		jeolStats.seconds = Date.now() - start;
 
-
-		emit(constants.events.export.jeol.DONE, {
-			totalPosExported,
-			failed,
-			outputUri,
-			outputName,
-			seconds: Date.now() - start
-		});
-
-		return {
-			totalPosExported,
-			failed,
-			outputUri,
-			outputName,
-			seconds: Date.now() - start
-		};
-	}
-
-	async exportQlwToJson(options = {}, directorySubset = []) {
-		const start = Date.now();
-		const emit = createEmit.createEmit(this.data.emitter, '');
-
-		emit(constants.events.export.qlw.START);
-		options = this.exportOptionsSanitize(this.transformOptions(options));
-		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
-		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
-
-		directorySubset = await this.exportClassify(directorySubset);
-
-		emit(constants.events.export.qlw.READY, {directorySubset});
-
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
-			return qlwDir.totalPositions() + accumulator;
-		}, 0);
-		let failed = 0;
-		let totalPosExported = 0;
-		let batchLength = 0;
-
+		start = Date.now();
 		if (options.qlw || options.xes || options.sum) {
 			let itemsToWrite = [];
 			let qlwDirData;
@@ -236,22 +192,39 @@ class Converter {
 					};
 
 					for (const [, pos] of positions) {
-						if (batchLength >= options.batchSize) {
+						if (qlwStats.batchLength >= options.batchSize) {
 							itemsToWrite.push(qlwDirData);
-							totalPosExported += batchLength;
+							qlwStats.totalPosExported += qlwStats.batchLength;
 
-							await json.writeToFile(`${outputUri}/${outputName}_${totalPosExported}.json`, itemsToWrite);
+							if (types.includes(constants.export.types.CSV)) {
+								let writingPromises = [];
+
+								if (options.qlw)
+									writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${qlwStats.totalPosExported}.csv`, itemsToWrite));
+
+								if (options.xes)
+									writingPromises.push(csv.writeXesToFile(`${outputUri}/${outputName}_xes_${qlwStats.totalPosExported}.csv`, itemsToWrite));
+
+								if (options.sum)
+									writingPromises.push(csv.writeSumToFile(`${outputUri}/${outputName}_sum_${qlwStats.totalPosExported}.csv`, itemsToWrite));
+
+								await Promise.all(writingPromises);
+							}
+
+							if (types.includes(constants.export.types.JSON))
+								await json.writeToFile(`${outputUri}/${outputName}_qlw_${qlwStats.totalPosExported}.json`, itemsToWrite);
+
 							emit(constants.events.export.qlw.NEW,
 								{
-									batchLength,
-									totalPositions,
-									failed,
-									totalExported: totalPosExported,
+									batchLength: qlwStats.batchLength,
+									totalPositions: qlwStats.totalPositions,
+									failed: qlwStats.failed,
+									totalExported: qlwStats.totalPosExported,
 									seconds: Date.now() - start
 								}
 							);
 
-							batchLength = 0;
+							qlwStats.batchLength = 0;
 							itemsToWrite = [];
 							qlwDirData.positions = [];
 						}
@@ -269,12 +242,12 @@ class Converter {
 								posData.sumData = pos.getSumData(posData.xesData);
 
 							qlwDirData.positions.push(posData);
-							batchLength++;
+							qlwStats.batchLength++;
 						} catch(err) {
 							console.log(err);
 
 							emit(constants.events.export.qlw.POSFAIL, {position: pos, err});
-							failed++;
+							qlwStats.failed++;
 						}
 					}
 
@@ -284,168 +257,58 @@ class Converter {
 			}
 
 			if (itemsToWrite.length !== 0) {
-				totalPosExported += batchLength;
+				qlwStats.totalPosExported += qlwStats.batchLength;
 
-				await json.writeToFile(`${outputUri}/${outputName}_${totalPosExported}.json`, itemsToWrite);
-				emit(constants.events.export.qlw.NEW, {
-					batchLength,
-					totalPositions,
-					failed,
-					totalExported: totalPosExported,
-					seconds: Date.now() - start
-				});
-			}
-		}
+				if (types.includes(constants.export.types.CSV)) {
+					let writingPromises = [];
 
-		emit(constants.events.export.qlw.DONE, {
-			totalPosExported,
-			failed,
-			outputUri,
-			outputName,
-			seconds: Date.now() - start
-		});
+					if (options.qlw)
+						writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${qlwStats.totalPosExported}.csv`, itemsToWrite));
 
-		return {
-			totalPosExported,
-			failed,
-			outputUri,
-			outputName,
-			seconds: Date.now() - start
-		};
-	}
+					if (options.xes)
+						writingPromises.push(csv.writeXesToFile(`${outputUri}/${outputName}_xes_${qlwStats.totalPosExported}.csv`, itemsToWrite));
 
-	async exportQlwToCsv(options = {}, directorySubset = []) {
-		const start = Date.now();
-		const emit = createEmit.createEmit(this.data.emitter, '');
+					if (options.sum)
+						writingPromises.push(csv.writeSumToFile(`${outputUri}/${outputName}_sum_${qlwStats.totalPosExported}.csv`, itemsToWrite));
 
-		emit(constants.events.export.qlw.START);
-		options = this.exportOptionsSanitize(this.transformOptions(options));
-		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
-		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
-
-		directorySubset = await this.exportClassify(directorySubset);
-
-		emit(constants.events.export.qlw.READY, {directorySubset});
-
-		const totalPositions = Array.from(directorySubset).reduce((accumulator, [, qlwDir]) => {
-			return qlwDir.totalPositions() + accumulator;
-		}, 0);
-		let failed = 0;
-		let totalPosExported = 0;
-		let batchLength = 0;
-
-		if (options.qlw || options.xes || options.sum) {
-			let itemsToWrite = [];
-			let qlwDirData;
-
-			for (const [uri, qlwDir] of directorySubset) {
-				const positions = qlwDir.getPositions();
-
-				if (positions.size > 0) {
-					qlwDirData = {
-						mapCond: qlwDir.getMapCond(),
-						mapRawCond: qlwDir.getMapRawCond(),
-						positions: []
-					};
-
-					for (const [, pos] of positions) {
-						if (batchLength >= options.batchSize) {
-							itemsToWrite.push(qlwDirData);
-							totalPosExported += batchLength;
-
-							let writingPromises = [];
-
-							if (options.qlw)
-								writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${totalPosExported}.csv`, itemsToWrite));
-
-							if (options.xes)
-								writingPromises.push(csv.writeXesToFile(`${outputUri}/${outputName}_xes_${totalPosExported}.csv`, itemsToWrite));
-
-							if (options.sum)
-								writingPromises.push(csv.writeSumToFile(`${outputUri}/${outputName}_sum_${totalPosExported}.csv`, itemsToWrite));
-
-							await Promise.all(writingPromises);
-							emit(constants.events.export.qlw.NEW,
-								{
-									batchLength,
-									totalPositions,
-									failed,
-									totalExported: totalPosExported,
-									seconds: Date.now() - start
-								}
-							);
-
-							batchLength = 0;
-							itemsToWrite = [];
-							qlwDirData.positions = [];
-						}
-
-						let posData = {
-							dataCond: pos.getDataCond()
-						};
-
-						try {
-							if (options.qlw)
-								posData.qlwData = pos.getQlwData();
-							if (options.xes)
-								posData.xesData = pos.getXesData(options);
-							if (options.sum)
-								posData.sumData = pos.getSumData(posData.xesData);
-
-							qlwDirData.positions.push(posData);
-							batchLength++;
-						} catch(err) {
-							console.log(err);
-
-							emit(constants.events.export.qlw.POSFAIL, {position: pos, err});
-							failed++;
-						}
-					}
-
-					if (qlwDirData.positions.length > 0)
-						itemsToWrite.push(qlwDirData);
+					await Promise.all(writingPromises);
 				}
-			}
 
-			if (itemsToWrite.length !== 0) {
-				totalPosExported += batchLength;
+				if (types.includes(constants.export.types.JSON))
+					await json.writeToFile(`${outputUri}/${outputName}_qlw_${qlwStats.totalPosExported}.json`, itemsToWrite);
 
-				let writingPromises = [];
-
-				if (options.qlw)
-					writingPromises.push(csv.writeQlwToFile(`${outputUri}/${outputName}_qlw_${totalPosExported}.csv`, itemsToWrite));
-
-				if (options.xes)
-					writingPromises.push(csv.writeXesToFile(`${outputUri}/${outputName}_xes_${totalPosExported}.csv`, itemsToWrite));
-
-				if (options.sum)
-					writingPromises.push(csv.writeSumToFile(`${outputUri}/${outputName}_sum_${totalPosExported}.csv`, itemsToWrite));
-
-				await Promise.all(writingPromises);
 				emit(constants.events.export.qlw.NEW, {
-					batchLength,
-					totalPositions,
-					failed,
-					totalExported: totalPosExported,
+					batchLength: qlwStats.batchLength,
+					totalPositions: qlwStats.totalPositions,
+					failed: qlwStats.failed,
+					totalExported: qlwStats.totalPosExported,
 					seconds: Date.now() - start
 				});
 			}
-		}
 
-		emit(constants.events.export.qlw.DONE, {
-			totalPosExported,
-			failed,
-			outputUri,
-			outputName,
-			seconds: Date.now() - start
-		});
+			emit(constants.events.export.qlw.DONE, {
+				totalPosExported: qlwStats.totalPosExported,
+				failed: qlwStats.failed,
+				outputUri,
+				outputName,
+				seconds: Date.now() - start
+			});
+		}
+		qlwStats.seconds = Date.now() - start;
 
 		return {
-			totalPosExported,
-			failed,
 			outputUri,
 			outputName,
-			seconds: Date.now() - start
+			qlw: {
+				totalPosExported: qlwStats.totalPosExported,
+				failed: qlwStats.failed,
+				seconds: qlwStats.seconds
+			},
+			jeol: {
+				totalPosExported: jeolStats.totalPosExported,
+				failed: jeolStats.failed,
+				seconds: jeolStats.seconds
+			}
 		};
 	}
 

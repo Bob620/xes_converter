@@ -149,13 +149,13 @@ const conversions = {
 
 	},
 	jeolFileToObject: fileUri => {
-		// Jeol files are by default always 4096 points, if something changes this is the place
+		// Jeol files are by default always 4095 points, if something changes this is the place
 		if (fileUri) {
 			const positions = [];
 			const datas = [];
 
 			// Grab the jeol file as a buffer
-			const lines = fs.readFileSync(fileUri, 'utf8').split('\n');
+			const lines = fs.readFileSync(fileUri, 'utf8').replace(/\r/gi, '').split('\n');
 
 			for (let line of lines) {
 				const [pos, data] = line.split(',');
@@ -164,7 +164,7 @@ const conversions = {
 			}
 
 			return {
-				length: positions.length,
+				length: positions.length - 1,
 				getValueAt: pos => [positions[pos], datas[pos]],
 				serialize: () => {
 					return {data: datas, positions};

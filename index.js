@@ -72,9 +72,18 @@ let options = {
 	exportTypes: []
 };
 
-for (let i = 2; i < process.argv.length; i++) {
-	if (process.argv[i].startsWith('--')) {
-		switch (process.argv[i]) {
+let arguments = [];
+for (let i = 2; i < process.argv.length - 1; i++) {
+	let argument = process.argv[i];
+	if (argument.startsWith('"') || argument.startsWith('\'') || argument.startsWith('\`'))
+		argument = argument.slice(1, -1);
+	arguments = arguments.concat(argument.split(' '));
+}
+arguments.push(process.argv[process.argv.length - 1]);
+
+for (let i = 0; i < arguments.length; i++) {
+	if (arguments[i].startsWith('--')) {
+		switch(arguments[i]) {
 			case '--version':
 				options.version = true;
 				break;
@@ -112,10 +121,10 @@ for (let i = 2; i < process.argv.length; i++) {
 				options.help = true;
 				break;
 			case '--output':
-				options.outputDirectoryUri = process.argv[++i];
+				options.outputDirectoryUri = arguments[++i];
 				break;
 			case '--batchsize':
-				options.batchSize = process.argv[++i];
+				options.batchSize = arguments[++i];
 				break;
 			case '--loose':
 				options.loose = true;
@@ -127,7 +136,7 @@ for (let i = 2; i < process.argv.length; i++) {
 				options.debug = true;
 				break;
 			case '--method':
-				switch (process.argv[++i]) {
+				switch(arguments[++i]) {
 					case 'd':
 					case 'default':
 					default:
@@ -139,15 +148,15 @@ for (let i = 2; i < process.argv.length; i++) {
 					case 'p':
 					case 'prefix':
 						options.outputMethod.type = 'prefix';
-						options.outputMethod.data = process.argv[++i];
+						options.outputMethod.data = arguments[++i];
 						break;
 				}
 				break;
 			case '--format':
-				const next = process.argv[++i];
+				const next = arguments[++i];
 				if (next.startsWith('~'))
 					next.split('').map(char => {
-						switch (char) {
+						switch(char) {
 							case 'd':
 							default:
 								options.exportTypes.push(constants.export.types.DEFAULT);
@@ -161,7 +170,7 @@ for (let i = 2; i < process.argv.length; i++) {
 						}
 					});
 				else
-					switch (next) {
+					switch(next) {
 						case 'd':
 						case 'default':
 						default:
@@ -182,16 +191,16 @@ for (let i = 2; i < process.argv.length; i++) {
 					}
 				break;
 		}
-	} else if (process.argv[i].startsWith('-')) {
-		switch (process.argv[i]) {
+	} else if (arguments[i].startsWith('-')) {
+		switch(arguments[i]) {
 			case '-o':
-				options.outputDirectoryUri = process.argv[++i];
+				options.outputDirectoryUri = arguments[++i];
 				break;
 			case '-b':
-				options.batchSize = process.argv[++i];
+				options.batchSize = arguments[++i];
 				break;
 			case '-e':
-				switch (process.argv[++i]) {
+				switch(arguments[++i]) {
 					case 'd':
 					case 'default':
 					default:
@@ -203,15 +212,15 @@ for (let i = 2; i < process.argv.length; i++) {
 					case 'p':
 					case 'prefix':
 						options.outputMethod.type = 'prefix';
-						options.outputMethod.data = process.argv[++i];
+						options.outputMethod.data = arguments[++i];
 						break;
 				}
 				break;
 			case '-f':
-				const next = process.argv[++i];
+				const next = arguments[++i];
 				if (next.startsWith('~'))
 					next.split('').map(char => {
-						switch (char) {
+						switch(char) {
 							case 'd':
 								options.exportTypes.push(constants.export.types.DEFAULT);
 								break;
@@ -224,7 +233,7 @@ for (let i = 2; i < process.argv.length; i++) {
 						}
 					});
 				else
-					switch (next) {
+					switch(next) {
 						case 'd':
 						case 'default':
 						default:
@@ -245,8 +254,8 @@ for (let i = 2; i < process.argv.length; i++) {
 					}
 				break;
 			default:
-				for (const char of process.argv[i])
-					switch (char) {
+				for (const char of arguments[i])
+					switch(char) {
 						case 'v':
 							options.version = true;
 							break;
@@ -296,7 +305,7 @@ for (let i = 2; i < process.argv.length; i++) {
 				break;
 		}
 	} else
-		options.topDirectoryUri = process.argv[i];
+		options.topDirectoryUri = arguments[i];
 }
 
 if (options.topDirectoryUri === '' && !options.xes && !options.qlw && !options.sum && !options.version)
@@ -331,22 +340,13 @@ else {
 					console.log(`${data.totalExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}/${data.outputName}.zip`);
 				}).catch(console.log);
 
-			if (options.exportTypes.includes(constants.export.types.CSV)) {
-				if (options.qlw || options.xes || options.sum)
-					converter.exportQlwToCsv(options).then(data => {
-						console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
-					}).catch(console.log);
-				if (options.jeol)
-					converter.exportJeolToCsv(options).then(data => {
-						console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
-					}).catch(console.log);
-			}
-
-			if (options.exportTypes.includes(constants.export.types.JSON))
-				converter.exportQlwToJson(options).then(data => {
-					console.log(`${data.totalPosExported} positions exported with ${data.failed} failing to be exported to ${data.outputUri}`);
+			if (options.exportTypes.includes(constants.export.types.CSV) || options.exportTypes.includes(constants.export.types.JSON))
+				converter.exportQlwTo(options.exportTypes, options).then(({jeol, qlw, outputUri}) => {
+					console.log(`${qlw.totalPosExported} positions exported with ${qlw.failed} failing to be exported to ${outputUri}`);
+					console.log(`${jeol.totalPosExported} jeol positions exported with ${jeol.failed} failing to be exported to ${outputUri}`);
 				}).catch(console.log);
-		} catch (err) {
+
+		} catch(err) {
 			console.log(err);
 			debugLog(err.message);
 
