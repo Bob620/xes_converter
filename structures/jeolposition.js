@@ -24,17 +24,10 @@ module.exports = class {
 	}
 
 	getDataCond() {
-		return conditions.cndStringToMap(fs.readFileSync(`${this.data.directory.getUri()}/${this.data.dataCond.name}`, 'utf8'));
+		return conditions.cndStringToMap(fs.readFileSync(`${this.data.directory.getUri()}/${this.data.dataCond}`, 'utf8'));
 	}
 
 	getData() {
-		if (this.data.xesFile || this.data.xesFile === 'undefined')
-			return conversions.jeolFileToObject(`${this.data.directory.getUri()}/${this.data.jeolData.name}`);
-
-		return {
-			length: 0,
-			getValueAt: () => [0, 0],
-			serialize: {data: [], positions: []},
-		};
+		return conversions.jeolFileToObject(`${this.data.directory.getUri()}/${this.data.jeolData}`);
 	}
 };

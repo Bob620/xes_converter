@@ -370,7 +370,7 @@ function jeolTopFilter(directory, {strict = true, emitter}) {
 		return false;
 
 	// Strict Tests
-	if (strict && jeolOptions.dataCond.split('.')[0] === jeolOptions.jeolData.split('_')[0])
+	if (strict && jeolOptions.dataCond.split('.')[0] !== jeolOptions.jeolData.split('_')[0])
 		return false;
 
 	return new JeolPosition(directory, jeolOptions);
