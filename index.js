@@ -333,7 +333,10 @@ else {
 			const converter = new Converter();
 
 			converter.setWorkingDirectory(options.topDirectoryUri);
+
+			const start = Date.now();
 			converter.classifyWorkingDirectory(options);
+			log(`--------------------------- ${(Date.now() - start) / 1000}`);
 
 			if (options.exportTypes.includes(constants.export.types.PLZIP))
 				converter.exportQlwToPLZip(options).then(data => {
