@@ -178,5 +178,51 @@ module.exports = {
 		}
 
 		return writeAllData(fileUri, lines);
-	}
+	},
+	writeGrabToFile: (fileUri, items) => {
+		let lines = [];
+
+		// Set up all the lines needed for metadata
+//		for (let i = 0; i < constants.metadata.length; i++)
+//			lines.push([constants.metadata[i][constants.metadata[i].length - 1]]);
+
+		lines.push(['Name'], ['Xes Data']);
+
+		const metaLines = lines.length;
+
+		// Each item can have wildly different data and background lengths, but both background and data should be the same length
+		// Because of this we need a way to quantify the longest set and build around that
+		// Only the Y axis should be binned for the moment, if X were binned it would be a strange occurrence
+		let posByLength = [];
+
+		for (const item of items)
+			for (const position of item.positions)
+				posByLength.push([position.xesData.bins, position.xesData.poses, position]);
+
+		posByLength.sort((a, b) => {
+			return b[0] - a[0];
+		});
+
+		// y + 1 sets of data and another y + 1 sets of background based on the ccd camera size
+		for (let i = 0; i < posByLength[0][0] * posByLength[0][1]; i++)
+			lines.push(['']);
+
+		for (const [yBins, xBins, {xesData, name}] of posByLength) {
+			lines[0].push(name);
+
+			// Grab all the needed metadata
+//			const meta = metadata(mapCond, mapRawCond, dataCond);
+//			for (let i = 0; i < metaLines; i++)
+//				lines[i].push(meta[i]);
+
+			// Iterate over each bin in each position to append the data to the array (easiest way to work with csv atm)
+			for (let i = 0; i < yBins; i++) // Bin iteration
+				for (let k = 0; k < xBins; k++) { // Position iteration
+					lines[(i * xBins) + k + metaLines].push(xesData.getDataAt(i, k));
+//					lines[(yBins * xBins) + (i * xBins) + k + metaLines].push(xesData.getBackgroundAt(i, k));
+				}
+		}
+
+		return writeAllData(fileUri, lines);
+	},
 };

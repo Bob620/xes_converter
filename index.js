@@ -33,6 +33,7 @@ function help() {
 	log('-y, --loose                      \tTurns off strict checks on directories and file names');
 	log('-r, --recover                    \tAttempts to recover data from potentially corrupted xes files');
 	log('-d, --debug                      \tEnabled debugging text');
+	log('-g, --grab                       \tGrab all the *.xes files and convert them, overrides some options');
 	log('-h, --help                       \tProvides this text');
 	log('-o [uri], --output [uri]         \tOutput directory uri');
 	log('-e [method], --method [method]   \tOutput methodology');
@@ -68,6 +69,7 @@ let options = {
 	version: false,
 	loose: false,
 	debug: false,
+	grab: false,
 	outputMethod: {type: 'default', data: ''},
 	exportTypes: []
 };
@@ -134,6 +136,9 @@ for (let i = 0; i < arguments.length; i++) {
 				break;
 			case '--debug':
 				options.debug = true;
+				break;
+			case '--grab':
+				options.grab = true;
 				break;
 			case '--method':
 				switch(arguments[++i]) {
@@ -298,6 +303,9 @@ for (let i = 0; i < arguments.length; i++) {
 						case 'd':
 							options.debug = true;
 							break;
+						case 'g':
+							options.grab = true;
+							break;
 						case 'r':
 							options.recover = true;
 							break;
@@ -311,7 +319,7 @@ for (let i = 0; i < arguments.length; i++) {
 if (options.topDirectoryUri === '' && !options.xes && !options.qlw && !options.sum && !options.version)
 	options.help = true;
 
-if (!options.xes && !options.qlw && !options.sum && !options.jeol)
+if (!options.xes && !options.qlw && !options.sum && !options.jeol && !options.grab)
 	options.xes = true;
 
 if (options.debug) {
@@ -347,6 +355,13 @@ else {
 				converter.exportQlwTo(options.exportTypes, options).then(({jeol, qlw, outputUri}) => {
 					console.log(`${qlw.totalPosExported} positions exported with ${qlw.failed} failing to be exported to ${outputUri}`);
 					console.log(`${jeol.totalPosExported} jeol positions exported with ${jeol.failed} failing to be exported to ${outputUri}`);
+				}).catch(console.log);
+
+			if (options.grab)
+				converter.exportGrabTo(constants.export.types.CSV, options).then(({grab, outputUri}) => {
+					console.log();
+//					console.log(`${qlw.totalPosExported} positions exported with ${qlw.failed} failing to be exported to ${outputUri}`);
+//					console.log(`${jeol.totalPosExported} jeol positions exported with ${jeol.failed} failing to be exported to ${outputUri}`);
 				}).catch(console.log);
 
 		} catch(err) {

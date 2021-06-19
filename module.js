@@ -86,7 +86,7 @@ class Converter {
 
 		if (options.jeol)
 			jeolPosSubset = await this.exportClassifiedJeol(directorySubset);
-		directorySubset = await this.exportClassify(directorySubset);
+		directorySubset = await this.exportClassify(directorySubset, options);
 
 		emit(constants.events.export.qlw.READY, {directorySubset});
 		if (options.jeol)
@@ -312,6 +312,138 @@ class Converter {
 		};
 	}
 
+	async exportGrabTo(types = ['csv'], options = {}, directorySubset = []) {
+		const emit = createEmit.createEmit(this.data.emitter, '');
+
+		emit(constants.events.export.grab.START);
+		options = this.exportOptionsSanitize(this.transformOptions(options));
+		const outputUri = options.outputUri ? options.outputUri : this.data.workingDir.getUri();
+		const outputName = options.outputName ? options.outputName : this.data.workingDir.getName();
+
+		directorySubset = await this.exportClassify(directorySubset, options);
+
+		emit(constants.events.export.grab.READY, {directorySubset});
+
+		let grabStats = {
+			totalPositions: Array.from(directorySubset).reduce((accumulator, [, dir]) => {
+				return dir.length + accumulator;
+			}, 0),
+			failed: 0,
+			totalPosExported: 0,
+			batchLength: 0,
+			seconds: 0
+		};
+
+		let start = Date.now();
+
+		if (options.grab) {
+			let itemsToWrite = [];
+			let grabDirData;
+
+			for (const [uri, positions] of directorySubset) {
+				if (positions.length > 0) {
+					grabDirData = {
+						positions: []
+					};
+
+					for (const pos of positions) {
+						if (grabStats.batchLength >= options.batchSize) {
+							itemsToWrite.push(grabDirData);
+							grabStats.totalPosExported += grabStats.batchLength;
+
+							if (types.includes(constants.export.types.CSV)) {
+								let writingPromises = [];
+
+								if (options.grab)
+									writingPromises.push(csv.writeGrabToFile(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}.csv`, itemsToWrite));
+
+								await Promise.all(writingPromises);
+							}
+
+							if (types.includes(constants.export.types.JSON))
+								await json.writeToFile(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}.json`, itemsToWrite);
+
+							emit(constants.events.export.grab.NEW,
+								{
+									batchLength: grabStats.batchLength,
+									totalPositions: grabStats.totalPositions,
+									failed: grabStats.failed,
+									totalExported: grabStats.totalPosExported,
+									seconds: Date.now() - start
+								}
+							);
+
+							grabStats.batchLength = 0;
+							itemsToWrite = [];
+							grabDirData.positions = [];
+						}
+
+						let posData = {
+							xesData: pos.getXesData(options),
+							name: pos.data.file.name
+						};
+
+						try {
+							grabDirData.positions.push(posData);
+							grabStats.batchLength++;
+						} catch(err) {
+							console.log(err);
+
+							emit(constants.events.export.grab.POSFAIL, {position: pos, err});
+							grabStats.failed++;
+						}
+					}
+
+					if (grabDirData.positions.length > 0)
+						itemsToWrite.push(grabDirData);
+				}
+			}
+
+			if (itemsToWrite.length !== 0) {
+				grabStats.totalPosExported += grabStats.batchLength;
+
+				if (types.includes(constants.export.types.CSV)) {
+					let writingPromises = [];
+
+					if (options.grab)
+						writingPromises.push(csv.writeGrabToFile(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}.csv`, itemsToWrite));
+
+					await Promise.all(writingPromises);
+				}
+
+				if (types.includes(constants.export.types.JSON))
+					await json.writeToFile(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}.json`, itemsToWrite);
+
+				emit(constants.events.export.grab.NEW, {
+					batchLength: grabStats.batchLength,
+					totalPositions: grabStats.totalPositions,
+					failed: grabStats.failed,
+					totalExported: grabStats.totalPosExported,
+					seconds: Date.now() - start
+				});
+			}
+
+			emit(constants.events.export.grab.DONE, {
+				totalPosExported: grabStats.totalPosExported,
+				failed: grabStats.failed,
+				outputUri,
+				outputName,
+				seconds: Date.now() - start
+			});
+			grabStats.seconds = Date.now() - start;
+		}
+
+		return {
+			outputUri,
+			outputName,
+			grab: {
+				totalPosExported: grabStats.totalPosExported,
+				failed: grabStats.failed,
+				seconds: grabStats.seconds
+			}
+		};
+	}
+
 	async exportClassifiedJeol(directorySubset) {
 		const workingUri = this.data.workingDir.getUri();
 		const classifiedDirs = this.data.classifiedWorkingDir.jeol;
@@ -326,7 +458,7 @@ class Converter {
 		return directorySubset;
 	}
 
-	async exportClassify(directorySubset) {
+	async exportClassify(directorySubset, options) {
 		const workingUri = this.data.workingDir.getUri();
 		const classifiedDirs = this.data.classifiedWorkingDir.qlws;
 
@@ -359,7 +491,9 @@ class Converter {
 					}
 				}
 			});
-		} else
+		} else if (options.grab)
+			return this.data.classifiedWorkingDir.grabs;
+		else
 			return classifiedDirs;
 		return directorySubset;
 	}
@@ -379,7 +513,7 @@ class Converter {
 		let totalPosExported = 0;
 		let batchLength = 0;
 
-		directorySubset = await this.exportClassify(directorySubset);
+		directorySubset = await this.exportClassify(directorySubset, options);
 		const tempFolder = `${outputUri}/${outputName}.plzip.folder.tmp`;
 		await fsPromise.mkdir(tempFolder);
 		await fsPromise.mkdir(`${tempFolder}/${plConstants.fileStructure.background.ROOT}`);
@@ -576,6 +710,18 @@ class Converter {
 				break;
 			case constants.events.qlwPos.UPDATE:
 				console.log(`${type}  |  xes update ${data.xesFile.name}`);
+				break;
+			case constants.events.jeolPos.NEW:
+				console.log(`${type}  |  ${data.getDirectory().getUri()}, jeol: ${data.data.jeolData.name}, cond: ${data.data.dataCond.name}`);
+				break;
+			case constants.events.jeolPos.UPDATE:
+				console.log(`${type}  |  jeol update ${data.jeolData.name}`);
+				break;
+			case constants.events.grabXes.NEW:
+				console.log(`${type}  |  ${data.getDirectory().getUri()}, grabXes: ${data.data.file.name}`);
+				break;
+			case constants.events.grabXes.UPDATE:
+				console.log(`${type}  |  grabXes update ${data.file.name}`);
 				break;
 			case constants.events.export.qlw.READY:
 				console.log(`${type}  |  Due to uneven binning sizes, position order may be changed.`);

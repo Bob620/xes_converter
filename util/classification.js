@@ -3,6 +3,7 @@ const {createEmit} = require('../util/emitter.js');
 
 const Qlw = require('../structures/qlw.js');
 const QlwPosition = require('../structures/qlwposition.js');
+const GrabXes = require('../structures/grabxes.js');
 const MapThing = require('../structures/map.js');
 const JeolPosition = require('../structures/jeolposition.js');
 
@@ -31,6 +32,9 @@ module.exports = {
 
 			if (data.jeol)
 				output.jeol.set(uri, data.jeol);
+
+			if (data.grab)
+				output.grabs.set(uri, data.grab);
 		});
 
 		output.totalDirectories = output.qlws.size;
@@ -71,6 +75,9 @@ module.exports = {
 
 			if (data.jeol)
 				output.jeol.set(uri, data.jeol);
+
+			if (data.grab)
+				output.grabs.set(uri, data.grab);
 		});
 
 		output.totalDirectories = output.qlws.size;
@@ -108,6 +115,9 @@ module.exports = {
 		if (data.jeol)
 			output.jeol.set(uri, data.jeol);
 
+		if (data.grab)
+			output.grabs.set(uri, data.grab);
+
 		output.totalDirectories = output.qlws.size;
 		output.totalJeols = output.jeol.size;
 
@@ -133,6 +143,7 @@ function mergeClassified(classifiedOne, classifiedTwo) {
 		output.maps = new Map([...classifiedOne.maps, ...classifiedTwo.maps]);
 		output.lines = new Map([...classifiedOne.lines, ...classifiedTwo.lines]);
 		output.jeol = new Map([...classifiedOne.jeol, ...classifiedTwo.jeol]);
+		output.grabs = new Map([...classifiedOne.grab, ...classifiedTwo.grab]);
 
 		output.totalJeols = output.jeol.size;
 
@@ -164,7 +175,8 @@ function createEmptyOutput() {
 		qlws: new Map(),
 		maps: new Map(),
 		lines: new Map(),
-		jeol: new Map()
+		jeol: new Map(),
+		grabs: new Map()
 	};
 }
 
@@ -217,10 +229,38 @@ function classifyDirectory(directory, options) {
 			data.jeol = jeol;
 	}
 
+	if (options.grab) {
+		const grab = grabTopFilter(directory, options);
+		if (grab)
+			data.grab = grab;
+	}
+
 	return {
 		uri: directory.getUri(),
 		data
 	}
+}
+
+function grabTopFilter(directory, {strict = true, emitter}) {
+	const files = directory.getFiles();
+
+	// Loose tests
+	if (files.size < 0)
+		return false;
+
+	// No strict tests
+
+	let grabs = [];
+	for (const [, file] of files)
+		if (file.name.endsWith(constants.classification.qlw.pos.xesExt))
+			grabs.push(new GrabXes(directory, {
+				file,
+				emitter
+			}));
+
+	if (grabs.length > 0)
+		return grabs;
+	return false;
 }
 
 function qlwTopFilter(directory, {strict = true, emitter}) {
