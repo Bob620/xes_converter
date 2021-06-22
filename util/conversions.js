@@ -113,7 +113,8 @@ const conversions = {
 				return {data: points, background};
 			},
 			rawBackground: xesBackground ? xesBackground._view : new Uint8Array(),
-			rawData: xesData._view
+			rawData: xesData._view,
+			xesData
 		};
 	},
 	qlwFileToObject: fileUri => {

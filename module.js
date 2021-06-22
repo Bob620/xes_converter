@@ -5,6 +5,7 @@ const fsPromise = require('fs').promises;
 const Directory = require('./structures/directory');
 const Classifier = require('./util/classification');
 const csv = require('./util/csv');
+const grabExport = require('./util/grabexport.js');
 const json = require('./util/json');
 const plZipTest = require('./util/plziptest');
 const createEmit = require('./util/emitter');
@@ -355,7 +356,8 @@ class Converter {
 								let writingPromises = [];
 
 								if (options.grab)
-									writingPromises.push(csv.writeGrabToFile(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}.csv`, itemsToWrite));
+									for (const position of itemsToWrite[0].positions)
+										writingPromises.push(grabExport.writeSingle2DImage(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}_${position.name}.png`, position));
 
 								await Promise.all(writingPromises);
 							}
@@ -406,7 +408,8 @@ class Converter {
 					let writingPromises = [];
 
 					if (options.grab)
-						writingPromises.push(csv.writeGrabToFile(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}.csv`, itemsToWrite));
+						for (const position of itemsToWrite[0].positions)
+							writingPromises.push(grabExport.writeSingle2DImage(`${outputUri}/${outputName}_grab_${grabStats.totalPosExported}_${position.name}.png`, position));
 
 					await Promise.all(writingPromises);
 				}
